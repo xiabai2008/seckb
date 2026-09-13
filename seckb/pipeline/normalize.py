@@ -76,3 +76,92 @@ def html_to_markdown(
             md, base_dir=base_dir, images_dir=images_dir, fetcher=fetcher or _default_fetcher
         )
     return title, md.strip() + "\n"
+
+
+_EXT_FORMAT = {
+    ".html": "html",
+    ".htm": "html",
+    ".xhtml": "html",
+    ".pdf": "pdf",
+    ".epub": "epub",
+    ".md": "markdown",
+    ".markdown": "markdown",
+    ".txt": "markdown",
+}
+
+_PDF_MIN_CHARS_PER_PAGE = 30
+
+
+class NormalizeResult:
+    __slots__ = ("title", "markdown", "source_type", "needs_ocr")
+
+    def __init__(self, title: str, markdown: str, source_type: str, needs_ocr: bool = False):
+        self.title = title
+        self.markdown = markdown
+        self.source_type = source_type
+        self.needs_ocr = needs_ocr
+
+
+def guess_format(path: Path) -> str:
+    return _EXT_FORMAT.get(path.suffix.lower(), "markdown")
+
+
+def pdf_to_markdown(path: Path) -> tuple[str, str]:
+    import pymupdf
+    import pymupdf4llm
+
+    doc = pymupdf.open(str(path))
+    pages = doc.page_count
+    text_len = sum(len(page.get_text()) for page in doc)
+    if pages > 0 and text_len / pages < _PDF_MIN_CHARS_PER_PAGE:
+        doc.close()
+        raise ScannedPdfError(f"{path.name}: 疑似扫描版，需 OCR")
+    title = (doc.metadata or {}).get("title") or ""
+    md = pymupdf4llm.to_markdown(str(path))
+    doc.close()
+    return title.strip(), md.strip() + "\n"
+
+
+def epub_to_markdown(path: Path) -> tuple[str, str]:
+    from ebooklib import ITEM_DOCUMENT, epub
+
+    book = epub.read_epub(str(path))
+    title = ""
+    metadata = book.get_metadata("DC", "title")
+    if metadata:
+        title = str(metadata[0][0])
+    parts: list[str] = []
+    for item in book.get_items_of_type(ITEM_DOCUMENT):
+        html = item.get_content().decode("utf-8", errors="replace")
+        _, md = html_to_markdown(html)
+        if md.strip():
+            parts.append(md.strip())
+    return title.strip(), "\n\n".join(parts) + "\n"
+
+
+def normalize_to_markdown(
+    src: Path,
+    *,
+    out_dir: Path,
+    stem: str,
+    fetcher: Fetcher | None = None,
+) -> NormalizeResult:
+    fmt = guess_format(src)
+    if fmt == "html":
+        html = src.read_text(encoding="utf-8", errors="replace")
+        images_dir = out_dir / f"{stem}.assets" if _IMG_RE.search(html) else None
+        title, md = html_to_markdown(
+            html, base_dir=src.parent, images_dir=images_dir, fetcher=fetcher
+        )
+        return NormalizeResult(title or src.stem, md, "html")
+    if fmt == "pdf":
+        try:
+            title, md = pdf_to_markdown(src)
+        except ScannedPdfError:
+            return NormalizeResult(src.stem, "", "pdf", needs_ocr=True)
+        return NormalizeResult(title or src.stem, md, "pdf")
+    if fmt == "epub":
+        title, md = epub_to_markdown(src)
+        return NormalizeResult(title or src.stem, md, "epub")
+    md = src.read_text(encoding="utf-8", errors="replace")
+    return NormalizeResult(src.stem, md.strip() + "\n", "markdown")

@@ -1315,7 +1315,7 @@ def normalize_to_markdown(
 - [ ] **Step 4: 运行测试确认通过**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_normalize.py -v`
-Expected: `8 passed`
+Expected: `7 passed`
 
 - [ ] **Step 5: 提交**
 
