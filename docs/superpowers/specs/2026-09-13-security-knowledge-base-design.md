@@ -120,7 +120,7 @@ D:\SecurityKB\
    - `tags[]`、`entities`（CVE/工具/ATT&CK/OWASP/产品）
    - `snippets[]`（kind/lang/tool/content/context）
 3. **队列控制**：`jobs` 表驱动，限流、重试、预算上限（token/费用）可配；提示词与输出 schema 版本化，支持批量重跑
-4. **向量化**：本地 bge-m3（RTX 4060 Ti，FlagEmbedding），对 chunk 生成 embedding 写入 LanceDB；富化失败不阻塞向量可用
+4. **向量化**：本地 bge-m3（Ollama，RTX 4060 Ti GPU 加速），对 chunk 生成 embedding 写入 LanceDB；富化失败不阻塞向量可用
 
 ### 6.4 知识卡片
 
@@ -263,7 +263,7 @@ seckb/
 | Agent 接口 | MCP + HTTP 双接口，共用一个检索内核 | 兼容任意 agent 工具链，避免重复实现 |
 | 内容粒度 | 卡片 / chunk / snippet 三级 | agent 按 token 预算取用，省上下文 |
 | 富化方式 | 规则兜底 + 云端 LLM（OpenAI 兼容，默认 DeepSeek） | 质量换成本可控；接口可切换到任意 provider |
-| 向量化 | 本地 bge-m3（RTX 4060 Ti） | 免费、快、隐私好；可切云端 embedding |
+| 向量化 | 本地 bge-m3（Ollama，RTX 4060 Ti） | 免费、快、隐私好；免装 2.5GB torch；可切云端 embedding |
 | 采集节奏 | 自动定时增量 | 长期滚雪球 |
 | 语言策略 | 中文优先、英文并重 | 中文源解析规则先做，英文源按需增量 |
 | 书籍通道 | 本地文件入库 + 书目清单 + 合法公开源 | 规避盗版爬虫风险，工具只管入库编目 |
