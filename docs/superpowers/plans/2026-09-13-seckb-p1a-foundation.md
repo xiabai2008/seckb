@@ -2007,8 +2007,8 @@ def test_scanned_pdf_needs_ocr(kb, tmp_path: Path):
 
 
 def test_scan_inbox(kb, tmp_path: Path):
-    write_post(tmp_path, "one.md", "# 提权笔记\n\nlinux 提权常见手法：suid、sudo、cron。")
-    write_post(tmp_path, "two.md", "# XSS 笔记\n\n反射型 xss 的利用与绕过，配合 csrf 链式利用。")
+    write_post(kb.root / "inbox", "one.md", "# 提权笔记\n\nlinux 提权常见手法：suid、sudo、cron。")
+    write_post(kb.root / "inbox", "two.md", "# XSS 笔记\n\n反射型 xss 的利用与绕过，配合 csrf 链式利用。")
     reports = scan_inbox(kb.conn, kb.settings)
     assert [r.status for r in reports] == ["imported", "imported"]
     assert not list((kb.root / "inbox").iterdir())
@@ -2063,6 +2063,7 @@ from seckb.utils.hashing import sha256_file, slugify
 from seckb.utils.simhash import simhash64, to_signed64
 
 _CJK_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
+_H1_RE = re.compile(r"^#\s+(.+?)\s*$")
 
 
 @dataclass
@@ -2070,6 +2071,14 @@ class ImportReport:
     status: str
     asset_id: int | None = None
     path: str | None = None
+
+
+def _first_h1(markdown: str) -> str:
+    for line in markdown.splitlines():
+        match = _H1_RE.match(line)
+        if match:
+            return match.group(1).strip().rstrip("#").strip()
+    return ""
 
 
 def detect_lang(text: str) -> str:
@@ -2137,8 +2146,11 @@ def import_file(
         return ImportReport("duplicated", near, None)
 
     kind = asset_type or ("book" if result.source_type in {"pdf", "epub"} else "post")
+    title = result.title
+    if result.source_type == "markdown":
+        title = _first_h1(result.markdown) or result.title
     direction = guess_direction(
-        result.title, result.markdown, settings.taxonomy.get("directions", {})
+        title, result.markdown, settings.taxonomy.get("directions", {})
     )
     lang = detect_lang(result.markdown)
 
@@ -2171,7 +2183,7 @@ def import_file(
         """,
         (
             kind,
-            result.title,
+            title,
             lang,
             "manual",
             None,
@@ -2210,7 +2222,7 @@ def import_file(
 
     if kind == "book":
         meta = {
-            "title": result.title,
+            "title": title,
             "sha256": sha,
             "direction": direction,
             "imported_at": now,
