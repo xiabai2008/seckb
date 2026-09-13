@@ -1,0 +1,12 @@
+directions:
+  web-security: [web安全, xss, sql注入, ssrf, 反序列化, java安全]
+  pentest: [渗透, 提权, 内网, 横向, 域渗透]
+  reverse-engineering: [逆向, 脱壳, 反汇编, ida, ollvm]
+  crypto: [密码学, 加密算法, rsa, aes, 对称加密]
+  code-audit: [代码审计, 白盒, 审计]
+  cloud-security: [云安全, 容器, kubernetes, docker, 云原生]
+  ics-security: [工控, modbus, plc, scada]
+  mobile-security: [安卓, android, ios, 移动安全, app逆向]
+  incident-response: [应急响应, 取证, 日志分析, 溯源]
+  data-security: [数据安全, 脱敏, 隐私]
+tools: [nmap, sqlmap, nuclei, burp, wireshark, metasploit, mimikatz, fscan, httpx, gobuster, hashcat, john, bloodhound, impacket, responder, proxychains]
