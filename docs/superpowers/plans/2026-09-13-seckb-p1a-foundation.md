@@ -2489,6 +2489,8 @@ Expected: 全部通过（约 40 个用例）
 Run: `.venv\Scripts\python.exe -m ruff check seckb tests`
 Expected: 无错误；若有则逐条修复后重跑 Step 2。
 
+> 执行记录（2026-09-13）：实际修复 13 处，涉及 `seckb/cli.py`（B008→`Annotated`）、`seckb/pipeline/importer.py`（UP017→`datetime.UTC`）、`seckb/pipeline/normalize.py`（UP035/RUF023）、`seckb/search.py`（I001）、`tests/test_db.py`（F401/PLC0208）、`tests/test_normalize.py`（F401/F811/RUF059）、`tests/test_e2e.py`（删除未使用 import）。行为均不变，修复后 50 passed + ruff clean。
+
 - [ ] **Step 4: 真实知识库冒烟（手动）**
 
 在仓库根执行（会在 D:\SecurityKB 建库并导入一个样例）：

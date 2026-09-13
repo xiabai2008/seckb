@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import sqlite3
 
-from seckb.indexer.fts import SearchHit, search as fts_search
+from seckb.indexer.fts import SearchHit
+from seckb.indexer.fts import search as fts_search
 
 
 def search(

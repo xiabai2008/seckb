@@ -1,5 +1,3 @@
-import sqlite3
-
 from seckb.db.connection import init_db
 from seckb.models import Asset, ChunkDraft, SnippetDraft
 
@@ -10,7 +8,7 @@ def test_init_db_creates_dirs_and_tables(kb):
         row["name"]
         for row in kb.conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
     }
-    for expected in {
+    for expected in (
         "assets",
         "chunks",
         "snippets",
@@ -19,7 +17,7 @@ def test_init_db_creates_dirs_and_tables(kb):
         "books",
         "posts",
         "chunks_fts",
-    }:
+    ):
         assert expected in names
 
 

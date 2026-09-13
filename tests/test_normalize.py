@@ -42,7 +42,7 @@ def test_html_images_localized_with_injected_fetcher(tmp_path: Path):
         calls.append(url)
         return b"\x89PNG fake-bytes"
 
-    title, md = html_to_markdown(
+    _title, md = html_to_markdown(
         html, base_dir=tmp_path, images_dir=tmp_path / "PoC.assets", fetcher=fake_fetcher
     )
     assert calls == ["https://example.com/poc.png"]
@@ -62,7 +62,7 @@ def make_text_pdf(path: Path) -> None:
 def test_pdf_to_markdown_extracts_text(tmp_path: Path):
     pdf_path = tmp_path / "book.pdf"
     make_text_pdf(pdf_path)
-    title, md = pdf_to_markdown(pdf_path)
+    _title, md = pdf_to_markdown(pdf_path)
     assert "UNION based injection" in md
 
 
@@ -95,8 +95,6 @@ def test_epub_to_markdown(tmp_path: Path):
     book.add_item(epub.EpubNcx())
     book.add_item(epub.EpubNav())
     epub.write_epub(str(epub_path), book)
-
-    from seckb.pipeline.normalize import epub_to_markdown
 
     title, md = epub_to_markdown(epub_path)
     assert title == "Crypto Notes"

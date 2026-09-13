@@ -5,7 +5,7 @@ import re
 import shutil
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from seckb.config import Settings
@@ -129,7 +129,7 @@ def import_file(
         shutil.move(str(src), str(orig_path))
         orig_rel = orig_path.relative_to(settings.kb_root).as_posix()
 
-    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    now = datetime.now(UTC).isoformat(timespec="seconds")
     cursor = conn.execute(
         """
         INSERT INTO assets(type, title, lang, source, source_url, path, md_path,

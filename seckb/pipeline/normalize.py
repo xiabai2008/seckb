@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import re
 import urllib.request
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 from urllib.parse import urlsplit
 
 from markdownify import markdownify
@@ -93,7 +93,7 @@ _PDF_MIN_CHARS_PER_PAGE = 30
 
 
 class NormalizeResult:
-    __slots__ = ("title", "markdown", "source_type", "needs_ocr")
+    __slots__ = ("markdown", "needs_ocr", "source_type", "title")
 
     def __init__(self, title: str, markdown: str, source_type: str, needs_ocr: bool = False):
         self.title = title

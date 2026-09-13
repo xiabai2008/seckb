@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -23,7 +24,9 @@ def _open(settings: Settings) -> sqlite3.Connection:
 @app.callback()
 def app_callback(
     ctx: typer.Context,
-    config: Path = typer.Option(None, "--config", help="配置目录（含 settings.yaml / taxonomy.yaml）"),
+    config: Annotated[
+        Path | None, typer.Option("--config", help="配置目录（含 settings.yaml / taxonomy.yaml）")
+    ] = None,
 ) -> None:
     ctx.obj = load_settings(config)
 
@@ -37,7 +40,7 @@ def init(ctx: typer.Context) -> None:
 
 
 @app.command("import")
-def import_cmd(ctx: typer.Context, path: Path = typer.Argument(..., exists=True)) -> None:
+def import_cmd(ctx: typer.Context, path: Annotated[Path, typer.Argument(exists=True)]) -> None:
     settings: Settings = ctx.obj
     conn = _open(settings)
     report = import_file(conn, settings, path)
