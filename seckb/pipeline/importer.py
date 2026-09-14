@@ -13,6 +13,7 @@ from seckb.indexer import fts
 from seckb.pipeline import rules
 from seckb.pipeline.chunker import chunk_markdown
 from seckb.pipeline.dedupe import find_by_sha256, find_near_duplicate
+from seckb.pipeline.entities import link_entity
 from seckb.pipeline.normalize import normalize_to_markdown
 from seckb.utils.hashing import sha256_file, slugify
 from seckb.utils.simhash import simhash64, to_signed64
@@ -36,6 +37,19 @@ def _first_h1(markdown: str) -> str:
     return ""
 
 
+def _target_dir(kind: str, direction: str, lang: str, published_at: str | None) -> Path:
+    if kind == "book":
+        return Path("books") / direction
+    if kind == "cve":
+        year = published_at[:4] if published_at and published_at[:4].isdigit() else "misc"
+        return Path("vulndb") / year
+    if kind == "repo":
+        return Path("repos")
+    if kind == "writeup":
+        return Path("ctf")
+    return Path("posts") / lang
+
+
 def detect_lang(text: str) -> str:
     if not text:
         return "en"
@@ -53,30 +67,17 @@ def guess_direction(title: str, text: str, directions: dict[str, list[str]]) -> 
     return best
 
 
-def _link_entity(conn: sqlite3.Connection, asset_id: int, kind: str, name: str) -> None:
-    canonical = name.lower()
-    row = conn.execute(
-        "SELECT id FROM entities WHERE kind = ? AND canonical = ?", (kind, canonical)
-    ).fetchone()
-    if row:
-        entity_id = row["id"]
-    else:
-        cursor = conn.execute(
-            "INSERT INTO entities(kind, name, canonical) VALUES(?,?,?)", (kind, name, canonical)
-        )
-        entity_id = cursor.lastrowid
-    conn.execute(
-        "INSERT OR IGNORE INTO asset_entities(asset_id, entity_id) VALUES(?,?)",
-        (asset_id, entity_id),
-    )
-
-
 def import_file(
     conn: sqlite3.Connection,
     settings: Settings,
     src: Path,
     *,
     asset_type: str | None = None,
+    source: str = "manual",
+    source_url: str | None = None,
+    published_at: str | None = None,
+    source_id: str | None = None,
+    extra: dict | None = None,
 ) -> ImportReport:
     src = Path(src)
     if not src.is_file():
@@ -109,7 +110,7 @@ def import_file(
     )
     lang = detect_lang(result.markdown)
 
-    rel_dir = Path("books") / direction if kind == "book" else Path("posts") / lang
+    rel_dir = _target_dir(kind, direction, lang, published_at)
     out_dir = settings.kb_root / rel_dir
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -133,25 +134,28 @@ def import_file(
     cursor = conn.execute(
         """
         INSERT INTO assets(type, title, lang, source, source_url, path, md_path,
-                           sha256, simhash, size, format, imported_at, tags, category, status)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                           sha256, simhash, size, format, published_at, imported_at,
+                           tags, category, status, source_id)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
         (
             kind,
             title,
             lang,
-            "manual",
-            None,
+            source,
+            source_url,
             orig_rel,
             md_rel,
             sha,
             to_signed64(simhash64(result.markdown)),
             orig_size,
             result.source_type,
+            published_at,
             now,
             "[]",
             direction,
             "ok",
+            source_id,
         ),
     )
     asset_id = cursor.lastrowid
@@ -169,11 +173,11 @@ def import_file(
         )
 
     for cve in rules.extract_cves(result.markdown):
-        _link_entity(conn, asset_id, "cve", cve)
+        link_entity(conn, asset_id, "cve", cve)
     for attack_id in rules.extract_attack_ids(result.markdown):
-        _link_entity(conn, asset_id, "attack", attack_id)
+        link_entity(conn, asset_id, "attack", attack_id)
     for tool in rules.extract_tools(result.markdown, settings.taxonomy.get("tools", [])):
-        _link_entity(conn, asset_id, "tool", tool)
+        link_entity(conn, asset_id, "tool", tool)
 
     if kind == "book":
         meta = {
@@ -186,6 +190,45 @@ def import_file(
             json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         conn.execute("INSERT INTO books(asset_id) VALUES(?)", (asset_id,))
+
+    if kind == "repo" and extra and extra.get("owner"):
+        conn.execute(
+            """
+            INSERT INTO repos(asset_id, owner, name, stars, forks, language, topics,
+                              clone_url, license, archived, last_commit)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                asset_id,
+                extra.get("owner"),
+                extra.get("name"),
+                extra.get("stars"),
+                extra.get("forks"),
+                extra.get("language"),
+                json.dumps(extra.get("topics") or [], ensure_ascii=False),
+                extra.get("clone_url"),
+                extra.get("license"),
+                1 if extra.get("archived") else 0,
+                extra.get("last_commit"),
+            ),
+        )
+    if kind == "cve":
+        data = extra or {}
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO cves(asset_id, cve_id, cvss, cwe, affected, poc_refs, in_kev)
+            VALUES(?,?,?,?,?,?,?)
+            """,
+            (
+                asset_id,
+                data.get("cve_id"),
+                data.get("cvss"),
+                data.get("cwe"),
+                data.get("affected"),
+                json.dumps(data.get("poc_refs") or [], ensure_ascii=False),
+                1 if data.get("in_kev") else 0,
+            ),
+        )
 
     fts.index_asset(conn, asset_id)
     conn.commit()
