@@ -1367,7 +1367,8 @@ class GitHubConnector:
                 f"{RAW_ROOT}/{full_name}/HEAD/README.md",
                 sleep=self.sleep,
             )
-            for owner, name in sorted(_extract_repo_links(readme, full_name)):
+            for linked in sorted(_extract_repo_links(readme, full_name)):
+                owner, _, name = linked.partition("/")
                 url = f"https://github.com/{owner}/{name}"
                 items.append(
                     RawItem(
