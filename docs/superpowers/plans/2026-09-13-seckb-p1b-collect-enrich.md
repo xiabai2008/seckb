@@ -247,6 +247,7 @@ git commit -m "feat: P1b 依赖与配置扩展（sources/enrich/schedule）"
 **Files:**
 - Create: `seckb/db/migrations/0002_collect_enrich.sql`
 - Create: `tests/test_db_v2.py`
+- Modify: `tests/test_db.py`（P1a 的 `user_version == 1` 断言改为 2，共 3 处）
 
 - [ ] **Step 1: 写失败测试**
 
@@ -379,8 +380,10 @@ CREATE TABLE cves (
 
 - [ ] **Step 4: 运行测试确认通过**
 
-Run: `.venv\Scripts\python.exe -m pytest tests/test_db_v2.py -v`
-Expected: `4 passed`；再跑全量 `pytest -q` 确认既有测试不回归（应为 54 passed）
+Run: `.venv\Scripts\python.exe -m pytest tests/test_db_v2.py tests/test_db.py -v`
+Expected: `9 passed`（4 个新用例 + 5 个既有用例）；再跑全量 `pytest -q` 确认既有测试不回归（应为 55 passed）
+
+> 执行记录（2026-09-13）：P1a 的 `tests/test_db.py` 中 3 处 `user_version == 1` 断言需同步改为 `2`（迁移 0002 生效后版本号为 2），这是计划外的必要修正，已实施。
 
 - [ ] **Step 5: 提交**
 

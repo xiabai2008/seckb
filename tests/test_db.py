@@ -24,8 +24,8 @@ def test_init_db_creates_dirs_and_tables(kb):
 def test_migrate_is_idempotent(kb):
     from seckb.db.migrate import migrate
 
-    assert kb.conn.execute("PRAGMA user_version").fetchone()[0] == 1
-    assert migrate(kb.conn) == 1
+    assert kb.conn.execute("PRAGMA user_version").fetchone()[0] == 2
+    assert migrate(kb.conn) == 2
 
 
 def test_foreign_key_cascade(kb):
@@ -54,5 +54,5 @@ def test_models_defaults():
 
 def test_init_db_twice_is_safe(kb):
     conn2 = init_db(kb.root)
-    assert conn2.execute("PRAGMA user_version").fetchone()[0] == 1
+    assert conn2.execute("PRAGMA user_version").fetchone()[0] == 2
     conn2.close()
