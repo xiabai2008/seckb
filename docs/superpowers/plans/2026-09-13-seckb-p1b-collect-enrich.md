@@ -1737,6 +1737,7 @@ class KEVConnector:
                 [
                     f"## {cve_id}（在野利用）",
                     "",
+                    f"- 漏洞名称: {entry.get('vulnerabilityName') or '未知'}",
                     f"- 厂商: {entry.get('vendorProject') or '未知'}",
                     f"- 产品: {entry.get('product') or '未知'}",
                     f"- 加入 KEV 日期: {entry.get('dateAdded') or '未知'}",
@@ -1802,7 +1803,7 @@ class ExploitDBConnector:
             edb_id = (row.get("id") or "").strip()
             if not edb_id:
                 continue
-            cve = (row.get("codes") or "").strip()
+            cve = (row.get("codes") or "").strip().split(";", 1)[0].strip()
             page_url = f"{PAGE_ROOT}/{edb_id}"
             content = "\n".join(
                 [
@@ -1943,20 +1944,21 @@ class VulhubConnector:
             category, _, rest = path.partition("/")
             if category not in categories or not rest:
                 continue
-            env = rest.split("/")[0]
+            env = f"{category}/{rest.split('/')[0]}"
             if "/" in rest:
                 envs.setdefault(env, []).append(path)
         items: list[RawItem] = []
         for env, files in sorted(envs.items()):
+            name = env.rsplit("/", 1)[-1]
             url = f"{TREE_PAGE}/{env}"
             content = "\n".join(
-                [f"## Vulhub 环境 {env}", "", f"- 环境目录: {url}", "", "包含文件:", ""]
+                [f"## Vulhub 环境 {name}", "", f"- 环境目录: {url}", "", "包含文件:", ""]
                 + [f"- {path}" for path in sorted(files)]
             )
             items.append(
                 RawItem(
-                    source_id=f"vulhub:{env}",
-                    title=f"Vulhub {env}",
+                    source_id=f"vulhub:{name}",
+                    title=f"Vulhub {name}",
                     content=content,
                     asset_type="writeup",
                     url=url,
