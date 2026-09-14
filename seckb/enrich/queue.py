@@ -161,7 +161,7 @@ def process_jobs(
         try:
             raw = provider.complete(prompt)
             enrichment = parse_enrichment(raw)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - LLM 调用/解析失败需标记任务并继续
             attempts = job["attempts"] + 1
             status = "failed" if attempts >= max_attempts else "pending"
             _mark_job(conn, job["id"], status=status, error=str(exc))

@@ -83,7 +83,7 @@ def run_source(
     cursor = get_cursor(conn, connector.name)
     try:
         items, new_cursor = connector.fetch(cursor)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - 采集失败需记录健康状态并降级
         set_cursor(conn, connector.name, cursor, health="error")
         _record_run_finish(conn, run_id, failed=1, error=str(exc))
         return RunReport(source=connector.name, error=str(exc), run_id=run_id)

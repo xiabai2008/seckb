@@ -8,8 +8,16 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from seckb.collect import collect_all
 from seckb.config import Settings, load_settings
+from seckb.daemon import build_scheduler
 from seckb.db.connection import init_db
+from seckb.enrich.llm import build_provider
+from seckb.enrich.queue import process_jobs
+from seckb.indexer.meili import build_meili_client
+from seckb.indexer.meili import rebuild as rebuild_meili
+from seckb.indexer.vectors import build_embedder
+from seckb.indexer.vectors import index_asset as index_vectors
 from seckb.pipeline.importer import import_file, scan_inbox
 from seckb.search import search as search_kb
 
@@ -99,6 +107,95 @@ def stats(ctx: typer.Context) -> None:
     console.print(table)
     console.print(f"知识库位置：{settings.kb_root}")
     conn.close()
+
+
+@app.command()
+def collect(ctx: typer.Context, source: str = typer.Option(None, "--source")) -> None:
+    settings: Settings = ctx.obj
+    conn = _open(settings)
+    reports = collect_all(conn, settings, only=source)
+    for report in reports:
+        console.print(
+            f"{report.source}: fetched={report.fetched} imported={report.imported} "
+            f"skipped={report.skipped} updated={report.updated} error={report.error or '-'}"
+        )
+    conn.close()
+
+
+@app.command()
+def enrich(ctx: typer.Context, limit: int = typer.Option(10, "--limit", "-n")) -> None:
+    settings: Settings = ctx.obj
+    provider = build_provider(settings.enrich)
+    if provider is None:
+        console.print("[red]未配置 LLM API Key（环境变量 DEEPSEEK_API_KEY），无法富化[/red]")
+        raise typer.Exit(code=1)
+    conn = _open(settings)
+    report = process_jobs(conn, settings, provider, limit=limit)
+    console.print(
+        f"富化完成：处理 {report.processed}，成功 {report.succeeded}，失败 {report.failed}"
+    )
+    conn.close()
+
+
+@app.command()
+def embed(ctx: typer.Context) -> None:
+    settings: Settings = ctx.obj
+    conn = _open(settings)
+    embedder = build_embedder(settings.enrich)
+    total = 0
+    for row in conn.execute("SELECT id FROM assets ORDER BY id"):
+        total += index_vectors(conn, settings, embedder, row["id"])
+    console.print(f"向量化完成：{total} 个切片")
+    conn.close()
+
+
+@app.command()
+def index(ctx: typer.Context) -> None:
+    settings: Settings = ctx.obj
+    conn = _open(settings)
+    client = build_meili_client(settings.enrich)
+    client.ensure_index()
+    count = rebuild_meili(conn, client)
+    console.print(f"Meilisearch 重建完成：{count} 个文档")
+    conn.close()
+
+
+@app.command()
+def sources(ctx: typer.Context) -> None:
+    settings: Settings = ctx.obj
+    conn = _open(settings)
+    table = Table(title="采集源")
+    table.add_column("名称")
+    table.add_column("类型")
+    table.add_column("健康")
+    table.add_column("上次运行")
+    table.add_column("游标", max_width=40)
+    health = {
+        row["name"]: row
+        for row in conn.execute("SELECT * FROM sources")
+    }
+    for name, config in settings.sources.items():
+        row = health.get(name)
+        table.add_row(
+            name,
+            str(config.get("type")),
+            row["health"] if row else "-",
+            row["last_run_at"] if row else "-",
+            (row["last_cursor"] or "-") if row else "-",
+        )
+    console.print(table)
+    conn.close()
+
+
+@app.command()
+def daemon(ctx: typer.Context) -> None:
+    settings: Settings = ctx.obj
+    scheduler = build_scheduler(settings)
+    console.print("守护进程启动，任务：" + ", ".join(job.id for job in scheduler.get_jobs()))
+    try:
+        scheduler.start()
+    except (KeyboardInterrupt, SystemExit):
+        console.print("守护进程已停止")
 
 
 def main() -> None:

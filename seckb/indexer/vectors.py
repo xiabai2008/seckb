@@ -76,7 +76,7 @@ def _table_exists(db) -> bool:
     try:
         db.open_table(TABLE)
         return True
-    except Exception:
+    except Exception:  # noqa: BLE001 - LanceDB 未就绪时降级为空索引
         return False
 
 

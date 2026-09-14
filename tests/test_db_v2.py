@@ -12,7 +12,7 @@ def test_new_tables_exist(kb):
         row["name"]
         for row in kb.conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
     }
-    for expected in {"sources", "runs", "jobs", "cards", "repos", "cves"}:
+    for expected in ("sources", "runs", "jobs", "cards", "repos", "cves"):
         assert expected in names
 
 
