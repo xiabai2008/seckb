@@ -1,0 +1,17 @@
+provider:
+  base_url: https://api.deepseek.com/v1
+  model: deepseek-chat
+  api_key_env: DEEPSEEK_API_KEY
+  temperature: 0.2
+  max_tokens: 1600
+queue:
+  max_assets_per_run: 10
+  max_input_tokens: 6000
+  max_attempts: 3
+embedding:
+  provider: ollama
+  base_url: http://127.0.0.1:11434
+  model: bge-m3
+meili:
+  base_url: http://127.0.0.1:7700
+  api_key_env: MEILI_MASTER_KEY

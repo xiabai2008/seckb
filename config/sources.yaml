@@ -1,0 +1,30 @@
+sources:
+  rss:
+    type: rss
+    feeds:
+      - https://www.freebuf.com/feed
+      - https://api.anquanke.com/data/v1/rss
+      - https://bbs.kanxue.com/rss.xml
+      - https://feeds.feedburner.com/TheHackersNews
+      - https://www.bleepingcomputer.com/feed/
+      - https://kitploit.com/feeds/posts/default
+  github:
+    type: github
+    search_queries:
+      - "topic:security stars:>1000"
+      - "topic:pentest stars:>500"
+    awesome_repos:
+      - sbilly/awesome-security
+      - enaqx/awesome-pentest
+      - qazbnm456/awesome-web-security
+  nvd:
+    type: nvd
+    days_back: 7
+    max_pages: 5
+  kev:
+    type: kev
+  exploitdb:
+    type: exploitdb
+    max_rows: 500
+  vulhub:
+    type: vulhub

@@ -1,0 +1,9 @@
+collect:
+  rss: "0 */6 * * *"
+  nvd: "0 3 * * *"
+  kev: "30 3 * * *"
+  github: "0 4 * * 1"
+  exploitdb: "0 5 * * *"
+  vulhub: "0 5 * * 0"
+enrich:
+  every_minutes: 10
