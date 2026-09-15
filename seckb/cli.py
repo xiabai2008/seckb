@@ -16,8 +16,7 @@ from seckb.enrich.llm import build_provider
 from seckb.enrich.queue import process_jobs
 from seckb.indexer.meili import build_meili_client
 from seckb.indexer.meili import rebuild as rebuild_meili
-from seckb.indexer.vectors import build_embedder
-from seckb.indexer.vectors import index_asset as index_vectors
+from seckb.indexer.vectors import build_embedder, index_assets
 from seckb.pipeline.importer import import_file, scan_inbox
 from seckb.search import search as search_kb
 
@@ -155,14 +154,24 @@ def enrich(
 
 
 @app.command()
-def embed(ctx: typer.Context) -> None:
+def embed(
+    ctx: typer.Context,
+    batch: int = typer.Option(500, "--batch", help="每批提交的切片数"),
+) -> None:
     settings: Settings = ctx.obj
     conn = _open(settings)
     embedder = build_embedder(settings.enrich)
-    total = 0
-    for row in conn.execute("SELECT id FROM assets ORDER BY id"):
-        total += index_vectors(conn, settings, embedder, row["id"])
-    console.print(f"向量化完成：{total} 个切片")
+    asset_ids = [row["id"] for row in conn.execute("SELECT id FROM assets ORDER BY id")]
+    console.print(f"向量化开始：{len(asset_ids)} 个资产，批大小 {batch}")
+    total = index_assets(
+        conn,
+        settings,
+        embedder,
+        asset_ids,
+        batch_size=batch,
+        progress=lambda added: console.print(f"  已提交 {added} 个切片"),
+    )
+    console.print(f"向量化完成：新增 {total} 个切片")
     conn.close()
 
 

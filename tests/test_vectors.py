@@ -62,3 +62,13 @@ def test_reindex_is_idempotent(kb, tmp_path: Path):
 
 def test_search_without_index_returns_empty(kb):
     assert search_vectors(kb.settings, FakeEmbedder(), "任意查询") == []
+
+
+def test_index_assets_batched_and_idempotent(kb, tmp_path: Path):
+    from seckb.indexer.vectors import index_assets
+
+    a1 = make_asset(kb, tmp_path, "a.md", "甲", "内容甲。")
+    a2 = make_asset(kb, tmp_path, "b.md", "乙", "内容乙。")
+    embedder = FakeEmbedder()
+    assert index_assets(kb.conn, kb.settings, embedder, [a1, a2], batch_size=1) == 2
+    assert index_assets(kb.conn, kb.settings, embedder, [a1, a2], batch_size=100) == 0

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -106,6 +107,61 @@ def index_asset(
     else:
         db.create_table(TABLE, data=records)
     return len(records)
+
+
+def index_assets(
+    conn: sqlite3.Connection,
+    settings: Settings,
+    embedder: Embedder,
+    asset_ids: list[int],
+    *,
+    batch_size: int = 200,
+    progress: Callable[[int], None] | None = None,
+) -> int:
+    db = _connect(settings)
+    table = db.open_table(TABLE) if _table_exists(db) else None
+    existing: set[int] = set()
+    if table is not None:
+        existing = {int(value) for value in table.to_arrow()["chunk_id"].to_pylist()}
+    pending: list[dict] = []
+    added = 0
+
+    def flush() -> None:
+        nonlocal table, pending, added
+        if not pending:
+            return
+        if table is None:
+            table = db.create_table(TABLE, data=pending)
+        else:
+            table.add(pending)
+        added += len(pending)
+        pending = []
+        if progress is not None:
+            progress(added)
+
+    for asset_id in asset_ids:
+        rows = conn.execute(
+            "SELECT id, heading_path, content_md FROM chunks WHERE asset_id = ? ORDER BY seq",
+            (asset_id,),
+        ).fetchall()
+        rows = [row for row in rows if int(row["id"]) not in existing]
+        if not rows:
+            continue
+        texts = [
+            f"{row['heading_path']}\n{row['content_md']}"
+            if row["heading_path"]
+            else row["content_md"]
+            for row in rows
+        ]
+        vectors = embedder.embed(texts)
+        pending.extend(
+            {"chunk_id": row["id"], "asset_id": asset_id, "vector": vector}
+            for row, vector in zip(rows, vectors)
+        )
+        if len(pending) >= batch_size:
+            flush()
+    flush()
+    return added
 
 
 def search_vectors(
