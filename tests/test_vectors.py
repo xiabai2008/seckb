@@ -4,6 +4,7 @@ from pathlib import Path
 import httpx
 
 from seckb.indexer.vectors import (
+    EmbeddingError,
     FakeEmbedder,
     OllamaEmbedder,
     build_embedder,
@@ -72,3 +73,28 @@ def test_index_assets_batched_and_idempotent(kb, tmp_path: Path):
     embedder = FakeEmbedder()
     assert index_assets(kb.conn, kb.settings, embedder, [a1, a2], batch_size=1) == 2
     assert index_assets(kb.conn, kb.settings, embedder, [a1, a2], batch_size=100) == 0
+
+
+class PoisonEmbedder(FakeEmbedder):
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        if any("poison" in text for text in texts):
+            raise EmbeddingError("NaN")
+        return super().embed(texts)
+
+
+def test_index_assets_skips_poisoned_texts(kb, tmp_path: Path):
+    from seckb.indexer.vectors import index_assets
+
+    good = make_asset(kb, tmp_path, "good.md", "正常资产", "正常内容，可以向量化。")
+    bad = make_asset(kb, tmp_path, "bad.md", "毒资产", "poison 内容会让嵌入失败。")
+    added = index_assets(kb.conn, kb.settings, PoisonEmbedder(), [good, bad], batch_size=10)
+    assert added == 1
+    hits = search_vectors(
+        kb.settings,
+        FakeEmbedder(),
+        kb.conn.execute(
+            "SELECT content_md FROM chunks WHERE asset_id = ?", (good,)
+        ).fetchone()["content_md"],
+        limit=3,
+    )
+    assert hits and hits[0].asset_id == good

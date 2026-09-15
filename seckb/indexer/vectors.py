@@ -144,16 +144,27 @@ def index_assets(
             "SELECT id, heading_path, content_md FROM chunks WHERE asset_id = ? ORDER BY seq",
             (asset_id,),
         ).fetchall()
-        rows = [row for row in rows if int(row["id"]) not in existing]
+        rows = [
+            row
+            for row in rows
+            if int(row["id"]) not in existing and str(row["content_md"]).strip()
+        ]
         if not rows:
             continue
         texts = [
-            f"{row['heading_path']}\n{row['content_md']}"
-            if row["heading_path"]
-            else row["content_md"]
+            (
+                f"{row['heading_path']}\n{row['content_md']}"
+                if row["heading_path"]
+                else row["content_md"]
+            )[:8000]
             for row in rows
         ]
-        vectors = embedder.embed(texts)
+        try:
+            vectors = embedder.embed(texts)
+        except EmbeddingError:
+            vectors, rows = _embed_one_by_one(embedder, rows, texts)
+            if not rows:
+                continue
         pending.extend(
             {"chunk_id": row["id"], "asset_id": asset_id, "vector": vector}
             for row, vector in zip(rows, vectors)
@@ -162,6 +173,20 @@ def index_assets(
             flush()
     flush()
     return added
+
+
+def _embed_one_by_one(
+    embedder: Embedder, rows: list, texts: list[str]
+) -> tuple[list[list[float]], list]:
+    vectors: list[list[float]] = []
+    keep: list = []
+    for row, text in zip(rows, texts):
+        try:
+            vectors.append(embedder.embed([text])[0])
+            keep.append(row)
+        except EmbeddingError:
+            continue
+    return vectors, keep
 
 
 def search_vectors(
