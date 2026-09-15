@@ -3,7 +3,7 @@ provider:
   model: deepseek-v4.1-flash
   api_key_env: OPENCODE_API_KEY
   temperature: 0.2
-  max_tokens: 3000
+  max_tokens: 4000
   headers:
     x-opencode-session: seckb-enrich
 queue:

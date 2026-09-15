@@ -108,3 +108,8 @@ def test_build_provider_passes_headers(monkeypatch):
     provider = build_provider(config)
     assert provider is not None
     assert provider.extra_headers == {"x-opencode-session": "seckb-enrich"}
+
+
+def test_default_client_has_generous_timeout():
+    provider = OpenAICompatProvider(base_url="https://example.com/v1", api_key="k", model="m")
+    assert provider.client.timeout.read == 180.0

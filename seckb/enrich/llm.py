@@ -39,7 +39,7 @@ class OpenAICompatProvider:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.model = model
-        self.client = client or build_client()
+        self.client = client or build_client(timeout=180.0)
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.attempts = attempts
