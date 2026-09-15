@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from seckb.config import Settings
 from seckb.enrich.llm import LLMProvider
@@ -33,10 +34,32 @@ def enqueue(conn: sqlite3.Connection, asset_id: int, kind: str = "summary") -> i
     return cursor.lastrowid
 
 
-def pending_jobs(conn: sqlite3.Connection, limit: int = 10) -> list[sqlite3.Row]:
-    return conn.execute(
-        "SELECT * FROM jobs WHERE status = 'pending' ORDER BY id LIMIT ?", (limit,)
+def claim_jobs(conn: sqlite3.Connection, limit: int = 10) -> list[sqlite3.Row]:
+    rows = conn.execute(
+        """
+        UPDATE jobs SET status = 'running', updated_at = ?
+        WHERE id IN (SELECT id FROM jobs WHERE status = 'pending' ORDER BY id LIMIT ?)
+        RETURNING *
+        """,
+        (_now(), limit),
     ).fetchall()
+    conn.commit()
+    return rows
+
+
+def reset_stale(conn: sqlite3.Connection, *, older_than_minutes: int = 30) -> int:
+    cutoff = (datetime.now(UTC) - timedelta(minutes=older_than_minutes)).isoformat(
+        timespec="seconds"
+    )
+    cursor = conn.execute(
+        """
+        UPDATE jobs SET status = 'pending'
+        WHERE status = 'running' AND (updated_at IS NULL OR updated_at < ?)
+        """,
+        (cutoff,),
+    )
+    conn.commit()
+    return cursor.rowcount
 
 
 def _asset_text(conn: sqlite3.Connection, asset_id: int, max_input_tokens: int) -> str:
@@ -136,6 +159,14 @@ def _mark_job(
     conn.commit()
 
 
+def _fail_job(
+    conn: sqlite3.Connection, job: sqlite3.Row, error: str, max_attempts: int
+) -> None:
+    attempts = job["attempts"] + 1
+    status = "failed" if attempts >= max_attempts else "pending"
+    _mark_job(conn, job["id"], status=status, error=error)
+
+
 def process_jobs(
     conn: sqlite3.Connection,
     settings: Settings,
@@ -146,25 +177,48 @@ def process_jobs(
     queue_config = (settings.enrich or {}).get("queue") or {}
     max_input_tokens = int(queue_config.get("max_input_tokens", 6000))
     max_attempts = int(queue_config.get("max_attempts", 3))
-    report = QueueReport()
-    for job in pending_jobs(conn, limit):
-        report.processed += 1
+    concurrency = max(1, int(queue_config.get("concurrency", 1)))
+    reset_stale(conn)
+    jobs = claim_jobs(conn, limit)
+    report = QueueReport(processed=len(jobs))
+
+    prepared: list[tuple[sqlite3.Row, str]] = []
+    for job in jobs:
         asset = conn.execute(
             "SELECT * FROM assets WHERE id = ?", (job["asset_id"],)
         ).fetchone()
         if asset is None:
-            _mark_job(conn, job["id"], status="failed", error="资产不存在")
+            _fail_job(conn, job, "资产不存在", max_attempts)
             report.failed += 1
             continue
         text = _asset_text(conn, job["asset_id"], max_input_tokens)
-        prompt = build_prompt(asset["title"], text)
+        prepared.append((job, build_prompt(asset["title"], text)))
+
+    outcomes: list[str | Exception] = []
+    if concurrency > 1 and len(prepared) > 1:
+        with ThreadPoolExecutor(max_workers=concurrency) as pool:
+            futures = [pool.submit(provider.complete, prompt) for _, prompt in prepared]
+            for future in futures:
+                try:
+                    outcomes.append(future.result())
+                except Exception as exc:  # noqa: BLE001 - 单条失败降级为任务重试
+                    outcomes.append(exc)
+    else:
+        for _, prompt in prepared:
+            try:
+                outcomes.append(provider.complete(prompt))
+            except Exception as exc:  # noqa: BLE001 - 单条失败降级为任务重试
+                outcomes.append(exc)
+
+    for (job, _), outcome in zip(prepared, outcomes):
+        if isinstance(outcome, Exception):
+            _fail_job(conn, job, str(outcome), max_attempts)
+            report.failed += 1
+            continue
         try:
-            raw = provider.complete(prompt)
-            enrichment = parse_enrichment(raw)
-        except Exception as exc:  # noqa: BLE001 - LLM 调用/解析失败需标记任务并继续
-            attempts = job["attempts"] + 1
-            status = "failed" if attempts >= max_attempts else "pending"
-            _mark_job(conn, job["id"], status=status, error=str(exc))
+            enrichment = parse_enrichment(outcome)
+        except Exception as exc:  # noqa: BLE001 - 解析失败降级为任务重试
+            _fail_job(conn, job, str(exc), max_attempts)
             report.failed += 1
             continue
         save_card(conn, job["asset_id"], enrichment, model=getattr(provider, "model", None))

@@ -123,16 +123,33 @@ def collect(ctx: typer.Context, source: str = typer.Option(None, "--source")) ->
 
 
 @app.command()
-def enrich(ctx: typer.Context, limit: int = typer.Option(10, "--limit", "-n")) -> None:
+def enrich(
+    ctx: typer.Context,
+    limit: int = typer.Option(10, "--limit", "-n"),
+    drain: bool = typer.Option(False, "--drain", help="循环处理直到队列排空"),
+) -> None:
     settings: Settings = ctx.obj
     provider = build_provider(settings.enrich)
     if provider is None:
         console.print("[red]未配置 LLM API Key（环境变量 DEEPSEEK_API_KEY），无法富化[/red]")
         raise typer.Exit(code=1)
     conn = _open(settings)
-    report = process_jobs(conn, settings, provider, limit=limit)
+    total_processed = 0
+    total_succeeded = 0
+    total_failed = 0
+    while True:
+        report = process_jobs(conn, settings, provider, limit=limit)
+        total_processed += report.processed
+        total_succeeded += report.succeeded
+        total_failed += report.failed
+        console.print(
+            f"批次：处理 {report.processed}，成功 {report.succeeded}，失败 {report.failed}；"
+            f"累计成功 {total_succeeded}"
+        )
+        if not drain or report.processed == 0:
+            break
     console.print(
-        f"富化完成：处理 {report.processed}，成功 {report.succeeded}，失败 {report.failed}"
+        f"富化完成：处理 {total_processed}，成功 {total_succeeded}，失败 {total_failed}"
     )
     conn.close()
 

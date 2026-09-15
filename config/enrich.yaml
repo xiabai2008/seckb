@@ -7,9 +7,10 @@ provider:
   headers:
     x-opencode-session: seckb-enrich
 queue:
-  max_assets_per_run: 10
+  max_assets_per_run: 200
   max_input_tokens: 6000
   max_attempts: 3
+  concurrency: 8
 embedding:
   provider: ollama
   base_url: http://127.0.0.1:11434

@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from seckb.enrich.queue import enqueue, process_jobs
+from seckb.enrich.queue import claim_jobs, enqueue, process_jobs, reset_stale
 from seckb.pipeline.importer import import_file
 from seckb.utils.tokens import estimate_tokens
 
@@ -39,13 +39,18 @@ class FakeLLM:
         return self.response
 
 
-def make_asset(kb, tmp_path: Path) -> int:
-    src = tmp_path / "post.md"
-    src.write_text(
-        "# fastjson 反序列化\n\nCVE-2017-18349 利用记录，使用 marshalsec 启动 LDAP。\n\n"
-        "```bash\njava -jar marshalsec.jar\n```\n",
-        encoding="utf-8",
-    )
+def make_asset(
+    kb,
+    tmp_path: Path,
+    name: str = "post.md",
+    title: str = "fastjson 反序列化",
+    body: str = (
+        "CVE-2017-18349 利用记录，使用 marshalsec 启动 LDAP。\n\n"
+        "```bash\njava -jar marshalsec.jar\n```"
+    ),
+) -> int:
+    src = tmp_path / name
+    src.write_text(f"# {title}\n\n{body}\n", encoding="utf-8")
     return import_file(kb.conn, kb.settings, src).asset_id
 
 
@@ -107,3 +112,40 @@ def test_process_jobs_skips_done_jobs(kb, tmp_path: Path):
     process_jobs(kb.conn, kb.settings, FakeLLM())
     report = process_jobs(kb.conn, kb.settings, FakeLLM())
     assert report.processed == 0
+
+
+def test_claim_jobs_marks_running(kb, tmp_path: Path):
+    asset_id = make_asset(kb, tmp_path)
+    enqueue(kb.conn, asset_id)
+    claimed = claim_jobs(kb.conn, 10)
+    assert len(claimed) == 1
+    row = kb.conn.execute("SELECT * FROM jobs WHERE id = ?", (claimed[0]["id"],)).fetchone()
+    assert row["status"] == "running"
+    assert claim_jobs(kb.conn, 10) == []
+
+
+def test_reset_stale_running_jobs(kb, tmp_path: Path):
+    asset_id = make_asset(kb, tmp_path)
+    job_id = enqueue(kb.conn, asset_id)
+    claim_jobs(kb.conn, 10)
+    kb.conn.execute(
+        "UPDATE jobs SET updated_at = '2000-01-01T00:00:00+00:00' WHERE id = ?", (job_id,)
+    )
+    kb.conn.commit()
+    assert reset_stale(kb.conn) == 1
+    row = kb.conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    assert row["status"] == "pending"
+
+
+def test_process_jobs_concurrent(kb, tmp_path: Path):
+    ids = [
+        make_asset(kb, tmp_path, f"c{i}.md", f"并发测试 {i}", f"并发正文内容 {i}。")
+        for i in range(4)
+    ]
+    for asset_id in ids:
+        enqueue(kb.conn, asset_id)
+    kb.settings.enrich = {"queue": {"concurrency": 4}}
+    report = process_jobs(kb.conn, kb.settings, FakeLLM())
+    assert report.processed == 4
+    assert report.succeeded == 4
+    assert kb.conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0] == 4
