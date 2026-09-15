@@ -76,3 +76,24 @@ def test_build_meili_client_reads_env(monkeypatch):
     assert client.api_key == "master"
     monkeypatch.delenv("MEILI_MASTER_KEY", raising=False)
     assert build_meili_client({}).api_key is None
+
+
+def test_ensure_index_accepts_202_and_retries_404_settings():
+    calls: list[tuple[str, str]] = []
+    settings_attempts: list[int] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append((request.method, request.url.path))
+        if request.url.path == "/indexes" and request.method == "POST":
+            return httpx.Response(202, json={"taskUid": 1})
+        if request.url.path.endswith("/settings"):
+            settings_attempts.append(1)
+            if len(settings_attempts) == 1:
+                return httpx.Response(404, json={"message": "index_not_found"})
+            return httpx.Response(202, json={"taskUid": 2})
+        return httpx.Response(404, text="nope")
+
+    client = build_client(transport=httpx.MockTransport(handler))
+    meili = MeiliClient(client=client, sleep=lambda _: None)
+    meili.ensure_index()
+    assert len(settings_attempts) == 2

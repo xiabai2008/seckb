@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import time
+from collections.abc import Callable
 
 import httpx
 
@@ -23,10 +25,12 @@ class MeiliClient:
         base_url: str = "http://127.0.0.1:7700",
         api_key: str | None = None,
         client: httpx.Client | None = None,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.client = client or build_client()
+        self.sleep = sleep
 
     def _headers(self) -> dict:
         return {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
@@ -37,18 +41,25 @@ class MeiliClient:
             json={"uid": index, "primaryKey": "id"},
             headers=self._headers(),
         )
-        if response.status_code not in (200, 201, 409):
+        if response.status_code not in (200, 201, 202, 409):
             raise MeiliError(f"创建索引失败: HTTP {response.status_code}")
-        response = self.client.patch(
-            f"{self.base_url}/indexes/{index}/settings",
-            json={
-                "searchableAttributes": ["title", "summary", "tags", "content"],
-                "filterableAttributes": ["type", "tags", "source", "lang"],
-            },
-            headers=self._headers(),
-        )
-        if response.status_code >= 400:
+        settings = {
+            "searchableAttributes": ["title", "summary", "tags", "content"],
+            "filterableAttributes": ["type", "tags", "source", "lang"],
+        }
+        for attempt in range(5):
+            response = self.client.patch(
+                f"{self.base_url}/indexes/{index}/settings",
+                json=settings,
+                headers=self._headers(),
+            )
+            if response.status_code in (200, 202):
+                return
+            if response.status_code == 404:
+                self.sleep(0.5 * (attempt + 1))
+                continue
             raise MeiliError(f"更新索引设置失败: HTTP {response.status_code}")
+        raise MeiliError("更新索引设置失败: 索引创建超时")
 
     def upsert(self, docs: list[dict], index: str = INDEX) -> None:
         response = self.client.post(
