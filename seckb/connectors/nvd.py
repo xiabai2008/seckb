@@ -73,12 +73,14 @@ class NVDConnector:
         *,
         days_back: int = 7,
         max_pages: int = 5,
+        page_delay: float = 6.0,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self.name = name
         self.client = client
         self.days_back = days_back
         self.max_pages = max_pages
+        self.page_delay = page_delay
         self.sleep = sleep
 
     def _headers(self) -> dict:
@@ -110,4 +112,5 @@ class NVDConnector:
             start_index += page_size
             if start_index >= (data.get("totalResults") or 0):
                 break
+            self.sleep(self.page_delay)
         return items, end_str

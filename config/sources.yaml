@@ -4,10 +4,9 @@ sources:
     feeds:
       - https://www.freebuf.com/feed
       - https://api.anquanke.com/data/v1/rss
-      - https://bbs.kanxue.com/rss.xml
-      - https://feeds.feedburner.com/TheHackersNews
-      - https://www.bleepingcomputer.com/feed/
       - https://kitploit.com/feeds/posts/default
+      - https://hnrss.org/newest?q=security
+      - https://www.oschina.net/news/rss?show=sec
   github:
     type: github
     search_queries:
@@ -20,7 +19,7 @@ sources:
   nvd:
     type: nvd
     days_back: 7
-    max_pages: 5
+    max_pages: 20
   kev:
     type: kev
   exploitdb:

@@ -1,7 +1,8 @@
 import httpx
+import pytest
 
 from seckb.connectors.rss import RSSConnector
-from seckb.net import build_client
+from seckb.net import FetchError, build_client
 
 FEED = """<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel><title>安全资讯</title>
@@ -37,3 +38,27 @@ def test_rss_connector_parses_entries():
     assert "<p>" not in first.content
     assert first.published_at is not None
     assert cursor is None
+
+
+def test_rss_one_dead_feed_does_not_kill_others():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "dead" in str(request.url):
+            return httpx.Response(404, text="gone")
+        return httpx.Response(200, text=FEED)
+
+    client = build_client(transport=httpx.MockTransport(handler))
+    connector = RSSConnector(
+        "rss", ["https://example.com/dead.xml", "https://example.com/feed"], client, sleep=lambda _: None
+    )
+    items, _ = connector.fetch(None)
+    assert len(items) == 2
+
+
+def test_rss_all_feeds_dead_raises():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, text="gone")
+
+    client = build_client(transport=httpx.MockTransport(handler))
+    connector = RSSConnector("rss", ["https://example.com/a.xml"], client, sleep=lambda _: None)
+    with pytest.raises(FetchError):
+        connector.fetch(None)

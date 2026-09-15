@@ -7,7 +7,7 @@ import feedparser
 import httpx
 
 from seckb.connectors.base import RawItem
-from seckb.net import fetch_bytes
+from seckb.net import FetchError, fetch_bytes
 from seckb.pipeline.normalize import html_to_markdown
 
 
@@ -27,8 +27,15 @@ class RSSConnector:
 
     def fetch(self, cursor: str | None) -> tuple[list[RawItem], str | None]:
         items: list[RawItem] = []
+        failures = 0
+        last_error = ""
         for feed_url in self.feeds:
-            raw = fetch_bytes(self.client, feed_url, sleep=self.sleep)
+            try:
+                raw = fetch_bytes(self.client, feed_url, sleep=self.sleep)
+            except Exception as exc:  # noqa: BLE001 - 单个源失败需跳过并继续其它源
+                failures += 1
+                last_error = f"{feed_url}: {exc}"
+                continue
             parsed = feedparser.parse(raw)
             for entry in parsed.entries:
                 link = (entry.get("link") or "").strip()
@@ -50,4 +57,6 @@ class RSSConnector:
                         extra={"site": feed_url},
                     )
                 )
+        if self.feeds and failures == len(self.feeds):
+            raise FetchError(f"所有 RSS 源都失败，最后一个错误: {last_error}")
         return items, cursor

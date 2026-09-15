@@ -59,3 +59,27 @@ def test_nvd_uses_cursor_as_start():
     seen_params.clear()
     connector.fetch("2026-09-01T00:00:00.000")
     assert seen_params[0]["lastModStartDate"] == "2026-09-01T00:00:00.000"
+
+
+def test_nvd_sleeps_between_pages():
+    page_one = {
+        "resultsPerPage": 2,
+        "startIndex": 0,
+        "totalResults": 4,
+        "vulnerabilities": NVD_JSON["vulnerabilities"],
+    }
+    page_two = {**page_one, "startIndex": 2}
+    pages = {0: page_one, 2: page_two}
+
+    def paged_handler(request: httpx.Request) -> httpx.Response:
+        index = int(dict(request.url.params)["startIndex"])
+        return httpx.Response(200, json=pages[index])
+
+    slept: list[float] = []
+    client = build_client(transport=httpx.MockTransport(paged_handler))
+    connector = NVDConnector(
+        "nvd", client, max_pages=5, page_delay=6.0, sleep=lambda seconds: slept.append(seconds)
+    )
+    items, _ = connector.fetch(None)
+    assert len(items) == 4
+    assert slept == [6.0]
