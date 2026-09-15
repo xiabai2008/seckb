@@ -78,3 +78,33 @@ def test_build_provider_with_key(monkeypatch):
     provider = build_provider(config)
     assert provider is not None
     assert provider.model == "deepseek-chat"
+
+
+def test_complete_sends_extra_headers():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers["x-opencode-session"] == "seckb-enrich"
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    client = build_client(transport=httpx.MockTransport(handler))
+    provider = OpenAICompatProvider(
+        base_url="https://opencode.ai/zen/go/v1",
+        api_key="k",
+        model="m",
+        client=client,
+        extra_headers={"x-opencode-session": "seckb-enrich"},
+        sleep=lambda _: None,
+    )
+    assert provider.complete("hi") == "ok"
+
+
+def test_build_provider_passes_headers(monkeypatch):
+    monkeypatch.setenv("OPENCODE_API_KEY", "secret")
+    config = {
+        "provider": {
+            "api_key_env": "OPENCODE_API_KEY",
+            "headers": {"x-opencode-session": "seckb-enrich"},
+        }
+    }
+    provider = build_provider(config)
+    assert provider is not None
+    assert provider.extra_headers == {"x-opencode-session": "seckb-enrich"}

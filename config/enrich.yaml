@@ -1,9 +1,11 @@
 provider:
-  base_url: https://api.deepseek.com/v1
-  model: deepseek-chat
-  api_key_env: DEEPSEEK_API_KEY
+  base_url: https://opencode.ai/zen/go/v1
+  model: deepseek-v4.1-flash
+  api_key_env: OPENCODE_API_KEY
   temperature: 0.2
-  max_tokens: 1600
+  max_tokens: 3000
+  headers:
+    x-opencode-session: seckb-enrich
 queue:
   max_assets_per_run: 10
   max_input_tokens: 6000
