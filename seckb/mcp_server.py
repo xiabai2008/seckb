@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import sqlite3
 
 from mcp.server.mcpserver import MCPServer
@@ -8,6 +9,11 @@ from seckb import tools as kb_tools
 from seckb.config import Settings, load_settings
 from seckb.db.connection import init_db
 from seckb.retrieval import HybridRetriever, build_retriever
+
+
+def configure_logging() -> None:
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 def build_server(
@@ -48,6 +54,7 @@ def build_server(
 
 
 def run_stdio() -> None:
+    configure_logging()
     settings = load_settings()
     conn = init_db(settings.kb_root)
     retriever = build_retriever(conn, settings)

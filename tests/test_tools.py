@@ -116,3 +116,12 @@ def test_kb_card_includes_cve_structured_fields(kb, tmp_path: Path):
     assert card["cve"]["cvss"] == 9.8
     assert card["cve"]["cwe"] == "CWE-311"
     assert card["cve"]["in_kev"] is True
+
+
+def test_kb_get_clips_oversized_first_block(kb, tmp_path: Path):
+    body = "## 长章节\n\n" + "内容句子。" * 300
+    asset_id = make_asset(kb, tmp_path, "long.md", "长文", body)
+    result = kb_get(kb.conn, asset_id, section="长章节", max_tokens=50)
+    assert result["content"]
+    assert result["truncated"] is True
+    assert result["token_estimate"] <= 90

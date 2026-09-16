@@ -12,3 +12,14 @@ def test_mcp_server_registers_expected_tools(kb):
     assert names == {"kb_search", "kb_card", "kb_get", "kb_snippets"}
     for tool in tools:
         assert tool.description
+
+
+def test_configure_logging_quiets_http_logs():
+    import logging
+
+    from seckb.mcp_server import configure_logging
+
+    logging.getLogger("httpx").setLevel(logging.INFO)
+    configure_logging()
+    assert logging.getLogger("httpx").level == logging.WARNING
+    assert logging.getLogger("httpcore").level == logging.WARNING

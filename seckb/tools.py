@@ -125,6 +125,11 @@ def kb_get(
         heading = (row["heading_path"] or "").strip()
         block = f"[{heading}]\n{row['content_md']}" if heading else row["content_md"]
         block_tokens = estimate_tokens(block)
+        if not parts and block_tokens > max_tokens:
+            approx_chars = max(1, int(len(block) * max_tokens / block_tokens))
+            parts.append(block[:approx_chars])
+            truncated = True
+            break
         if total + block_tokens > max_tokens:
             truncated = True
             break
