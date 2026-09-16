@@ -5,6 +5,7 @@ import httpx
 from seckb.connectors.base import Connector
 from seckb.connectors.exploitdb import ExploitDBConnector
 from seckb.connectors.github import GitHubConnector
+from seckb.connectors.github_docs import GitHubDocsConnector
 from seckb.connectors.kev import KEVConnector
 from seckb.connectors.nvd import NVDConnector
 from seckb.connectors.rss import RSSConnector
@@ -21,6 +22,12 @@ def build_connector(name: str, config: dict, client: httpx.Client) -> Connector:
             client,
             queries=list(config.get("search_queries") or []),
             awesome_repos=list(config.get("awesome_repos") or []),
+        )
+    if kind == "github_docs":
+        return GitHubDocsConnector(
+            name,
+            client,
+            repos=list(config.get("repos") or []),
         )
     if kind == "nvd":
         return NVDConnector(

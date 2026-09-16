@@ -27,3 +27,27 @@ sources:
     max_rows: 500
   vulhub:
     type: vulhub
+  github_docs:
+    type: github_docs
+    repos:
+      - repo: swisskyrepo/PayloadsAllTheThings
+        max_files: 200
+      - repo: HackTricks-wiki/hacktricks
+        include_prefixes: ["src/"]
+        exclude_prefixes: ["src/todo/"]
+        max_files: 700
+      - repo: swisskyrepo/InternalAllTheThings
+        include_prefixes: ["docs/"]
+        max_files: 200
+      - repo: GTFOBins/GTFOBins.github.io
+        include_prefixes: ["_gtfobins/"]
+        suffixes: [""]
+        title_prefix: GTFOBins
+        max_files: 500
+      - repo: Threekiii/Awesome-POC
+        max_files: 800
+      - repo: ffffffff0x/1earn
+        include_prefixes: ["1earn/"]
+        max_files: 400
+      - repo: Bypass007/Emergency-Response-Notes
+        max_files: 100
