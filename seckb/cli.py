@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from seckb import tools as kb_tools
 from seckb.collect import collect_all
 from seckb.config import Settings, load_settings
 from seckb.daemon import build_scheduler
@@ -18,7 +19,7 @@ from seckb.indexer.meili import build_meili_client
 from seckb.indexer.meili import rebuild as rebuild_meili
 from seckb.indexer.vectors import build_embedder, index_assets
 from seckb.pipeline.importer import import_file, scan_inbox
-from seckb.search import search as search_kb
+from seckb.retrieval import build_retriever
 
 app = typer.Typer(help="seckb - 面向 AI agent 的本地网络安全知识库", no_args_is_help=True)
 console = Console()
@@ -72,16 +73,92 @@ def search(
     ctx: typer.Context,
     query: str = typer.Argument(...),
     limit: int = typer.Option(10, "--limit", "-n"),
+    type: str = typer.Option(None, "--type"),
+    tag: str = typer.Option(None, "--tag"),
 ) -> None:
     settings: Settings = ctx.obj
     conn = _open(settings)
-    hits = search_kb(conn, query, limit=limit)
-    table = Table(title=f"搜索：{query}（{len(hits)} 条）")
+    retriever = build_retriever(conn, settings)
+    response = kb_tools.kb_search(conn, retriever, query, type=type, tag=tag, limit=limit)
+    results = response["results"]
+    table = Table(title=f"搜索：{query}（{len(results)} 条）")
     table.add_column("id", width=6)
-    table.add_column("标题", max_width=40)
-    table.add_column("片段", max_width=60)
-    for hit in hits:
-        table.add_row(str(hit.asset_id), hit.title, hit.snippet)
+    table.add_column("类型", width=8)
+    table.add_column("标题", max_width=36)
+    table.add_column("命中", width=14)
+    table.add_column("片段", max_width=46)
+    for item in results:
+        table.add_row(
+            str(item["asset_id"]),
+            item["type"],
+            item["title"],
+            ",".join(item["matched_by"]),
+            item["snippet"],
+        )
+    console.print(table)
+    if response["degraded"]:
+        console.print(f"[yellow]降级检索（不可用：{', '.join(response['degraded'])}）[/yellow]")
+    conn.close()
+
+
+@app.command()
+def card(ctx: typer.Context, asset_id: int = typer.Argument(...)) -> None:
+    settings: Settings = ctx.obj
+    conn = _open(settings)
+    data = kb_tools.kb_card(conn, asset_id)
+    if data is None:
+        console.print("[red]资产不存在[/red]")
+        raise typer.Exit(code=1)
+    console.print(f"[bold]{data['title']}[/bold] ({data['type']}, id={asset_id})")
+    console.print(f"标签: {', '.join(data['tags']) or '-'}")
+    console.print(f"摘要: {data['summary'] or '（未富化）'}")
+    for takeaway in data["key_takeaways"]:
+        console.print(f"  - {takeaway}")
+    for kind, names in (data["entities"] or {}).items():
+        if names:
+            console.print(f"实体[{kind}]: {', '.join(names)}")
+    conn.close()
+
+
+@app.command("get")
+def get_cmd(
+    ctx: typer.Context,
+    asset_id: int = typer.Argument(...),
+    max_tokens: int = typer.Option(2000, "--max-tokens"),
+    section: str = typer.Option(None, "--section"),
+) -> None:
+    settings: Settings = ctx.obj
+    conn = _open(settings)
+    data = kb_tools.kb_get(conn, asset_id, section=section, max_tokens=max_tokens)
+    if data is None:
+        console.print("[red]资产不存在[/red]")
+        raise typer.Exit(code=1)
+    console.print(data["content"])
+    if data["truncated"]:
+        console.print(f"[yellow]（已截断，约 {data['token_estimate']} tokens）[/yellow]")
+    conn.close()
+
+
+@app.command()
+def snippets(
+    ctx: typer.Context,
+    query: str = typer.Argument(None),
+    tool: str = typer.Option(None, "--tool"),
+    kind: str = typer.Option(None, "--kind"),
+    limit: int = typer.Option(10, "--limit", "-n"),
+) -> None:
+    settings: Settings = ctx.obj
+    conn = _open(settings)
+    response = kb_tools.kb_snippets(conn, query=query, tool=tool, kind=kind, limit=limit)
+    table = Table(title=f"片段（{response['count']} 条）")
+    table.add_column("资产", width=6)
+    table.add_column("类型", width=10)
+    table.add_column("工具", width=12)
+    table.add_column("内容", max_width=60)
+    for item in response["snippets"]:
+        table.add_row(
+            str(item["asset_id"]), item["kind"] or "-", item["tool"] or "-", item["content"]
+        )
     console.print(table)
     conn.close()
 
