@@ -47,16 +47,13 @@ def rebuild(conn: sqlite3.Connection) -> int:
     return conn.execute("SELECT COUNT(*) FROM chunks_fts").fetchone()[0]
 
 
-def search(
+def _search(
     conn: sqlite3.Connection,
-    query: str,
+    match: str,
     *,
-    limit: int = 10,
-    asset_type: str | None = None,
+    limit: int,
+    asset_type: str | None,
 ) -> list[SearchHit]:
-    match = build_query(query)
-    if not match:
-        return []
     sql = """
         SELECT f.asset_id, f.rowid AS chunk_id, a.title, f.heading_path,
                snippet(chunks_fts, 0, '[', ']', '…', 16) AS snip,
@@ -83,3 +80,36 @@ def search(
         )
         for row in rows
     ]
+
+
+def search(
+    conn: sqlite3.Connection,
+    query: str,
+    *,
+    limit: int = 10,
+    asset_type: str | None = None,
+) -> list[SearchHit]:
+    match = build_query(query)
+    if not match:
+        return []
+    return _search(conn, match, limit=limit, asset_type=asset_type)
+
+
+def build_query_any(terms: list[str]) -> str:
+    parts = [
+        '"' + _INTERNAL_QUOTE.sub('""', term) + '"' for term in terms if len(term) >= 3
+    ]
+    return " OR ".join(parts)
+
+
+def search_any(
+    conn: sqlite3.Connection,
+    terms: list[str],
+    *,
+    limit: int = 10,
+    asset_type: str | None = None,
+) -> list[SearchHit]:
+    match = build_query_any(terms)
+    if not match:
+        return []
+    return _search(conn, match, limit=limit, asset_type=asset_type)

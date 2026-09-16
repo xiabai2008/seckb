@@ -1,4 +1,4 @@
-from seckb.indexer import fts
+﻿from seckb.indexer import fts
 from seckb.search import search
 
 
@@ -48,3 +48,18 @@ def test_rebuild(kb):
     count = fts.rebuild(kb.conn)
     assert count == 1
     assert len(search(kb.conn, "kubernetes")) == 1
+
+
+def test_build_query_any():
+    assert fts.build_query_any(["CVE-2017-0144", "ab", "MS17-010"]) == '"CVE-2017-0144" OR "MS17-010"'
+
+
+def test_search_any_matches_alternatives(kb):
+    add_asset(kb.conn, title="CVE-2017-0144 KEV", content="CVE-2017-0144 SMBv1 remote code execution")
+    hits = fts.search_any(kb.conn, ["绝不匹配词", "CVE-2017-0144"])
+    assert hits and hits[0].title == "CVE-2017-0144 KEV"
+
+
+def test_search_any_empty_terms_returns_empty(kb):
+    add_asset(kb.conn, title="A", content="content here")
+    assert fts.search_any(kb.conn, ["ab", "cd"]) == []

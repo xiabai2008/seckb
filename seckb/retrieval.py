@@ -107,6 +107,17 @@ def build_retriever(conn: sqlite3.Connection, settings: Settings) -> HybridRetri
     return HybridRetriever(conn, settings, meili=meili, embedder=embedder)
 
 
+def expand_query(query: str, aliases: dict[str, list[str]]) -> list[str]:
+    extra: list[str] = []
+    lowered = query.lower()
+    for name, terms in (aliases or {}).items():
+        if name.lower() in lowered:
+            for term in terms:
+                if term.lower() not in lowered and term not in extra:
+                    extra.append(term)
+    return extra
+
+
 class HybridRetriever:
     def __init__(
         self,
@@ -126,14 +137,38 @@ class HybridRetriever:
     ) -> tuple[list[tuple[str, list[Candidate]]], list[str]]:
         pools: list[tuple[str, list[Candidate]]] = []
         degraded: list[str] = []
+        extra_terms = expand_query(query, self.settings.taxonomy.get("aliases") or {})
+        expanded_query = " ".join([query, *extra_terms])
         fts_hits = fts.search(self.conn, query, limit=candidate_limit, asset_type=asset_type)
         pools.append(
-            ("fts", [Candidate(hit.asset_id, hit.chunk_id, rank) for rank, hit in enumerate(fts_hits, 1)])
+            (
+                "fts",
+                [
+                    Candidate(hit.asset_id, hit.chunk_id, rank)
+                    for rank, hit in enumerate(fts_hits, 1)
+                ],
+            )
         )
+        if extra_terms:
+            alias_hits = fts.search_any(
+                self.conn, extra_terms, limit=candidate_limit, asset_type=asset_type
+            )
+            if alias_hits:
+                pools.append(
+                    (
+                        "fts_alias",
+                        [
+                            Candidate(hit.asset_id, hit.chunk_id, rank)
+                            for rank, hit in enumerate(alias_hits, 1)
+                        ],
+                    )
+                )
         if self.meili is not None:
             try:
                 filters = f'type = "{asset_type}"' if asset_type else None
-                meili_hits = self.meili.search(query, limit=candidate_limit, filters=filters)
+                meili_hits = self.meili.search(
+                    expanded_query, limit=candidate_limit, filters=filters
+                )
                 pools.append(
                     (
                         "meili",
@@ -148,7 +183,7 @@ class HybridRetriever:
         if self.embedder is not None:
             try:
                 vector_hits = search_vectors(
-                    self.settings, self.embedder, query, limit=candidate_limit
+                    self.settings, self.embedder, expanded_query, limit=candidate_limit
                 )
                 pools.append(
                     (

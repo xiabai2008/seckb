@@ -3,7 +3,7 @@ from pathlib import Path
 from seckb.indexer.meili import MeiliError
 from seckb.indexer.vectors import EmbeddingError, FakeEmbedder, index_assets
 from seckb.pipeline.importer import import_file
-from seckb.retrieval import Candidate, HybridRetriever, rrf_fuse
+from seckb.retrieval import Candidate, HybridRetriever, expand_query, rrf_fuse
 
 
 def test_rrf_fuse_single_pool_keeps_order():
@@ -96,3 +96,25 @@ def test_hybrid_search_type_and_tag_filters(kb, tmp_path: Path):
     kb.conn.commit()
     by_tag = retriever.search("CVE-2021-44228", tag="log4j")
     assert [item.asset_id for item in by_tag.results] == [cve]
+
+
+def test_expand_query_with_aliases():
+    aliases = {"永恒之蓝": ["MS17-010", "CVE-2017-0144"], "脏牛": ["CVE-2016-5195"]}
+    assert expand_query("永恒之蓝怎么利用", aliases) == ["MS17-010", "CVE-2017-0144"]
+    assert expand_query("MS17-010 永恒之蓝", aliases) == ["CVE-2017-0144"]
+    assert expand_query("普通查询", aliases) == []
+    assert expand_query("LOG4SHELL 利用", {"log4shell": ["CVE-2021-44228"]}) == ["CVE-2021-44228"]
+
+
+def test_hybrid_search_alias_expansion_finds_cve(kb, tmp_path: Path):
+    cve = make_kb_asset(
+        kb, tmp_path, "cve.md", "CVE-2017-0144 KEV", "Microsoft SMBv1 remote code execution."
+    )
+    kb.settings.taxonomy = {
+        **kb.settings.taxonomy,
+        "aliases": {"永恒之蓝": ["MS17-010", "CVE-2017-0144"]},
+    }
+    retriever = HybridRetriever(kb.conn, kb.settings, meili=None, embedder=None)
+    response = retriever.search("永恒之蓝利用")
+    assert [item.asset_id for item in response.results] == [cve]
+    assert "fts_alias" in response.results[0].matched_by
