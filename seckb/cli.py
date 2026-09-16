@@ -164,6 +164,14 @@ def snippets(
 
 
 @app.command()
+def mcp(ctx: typer.Context) -> None:
+    from seckb.mcp_server import run_stdio
+
+    Console(stderr=True).print("seckb MCP server 启动（stdio），Ctrl+C 停止")
+    run_stdio()
+
+
+@app.command()
 def stats(ctx: typer.Context) -> None:
     settings: Settings = ctx.obj
     conn = _open(settings)

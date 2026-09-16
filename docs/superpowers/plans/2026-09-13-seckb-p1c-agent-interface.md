@@ -1138,6 +1138,8 @@ def mcp(ctx: typer.Context) -> None:
 Run: `.venv\Scripts\python.exe -m pytest tests/test_mcp_server.py tests/test_cli_v3.py -v`
 Expected: 全过；再跑 `.venv\Scripts\python.exe -m pytest -q` 确认无回归
 
+> 执行记录（2026-09-13）：本机 mcp 2.2.0 已将 `FastMCP` 更名为 `MCPServer`（`mcp.server.fastmcp` 导入即报 ModuleNotFoundError）。实现改为 `from mcp.server.mcpserver import MCPServer`，`MCPServer("seckb")` 与返回注解同步替换，其余逻辑与计划一致。
+
 - [ ] **Step 5: 提交**
 
 ```powershell
