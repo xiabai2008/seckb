@@ -71,3 +71,14 @@ def test_cli_snippets(tmp_path: Path):
     result = runner.invoke(app, ["--config", str(cfg), "snippets", "--kind", "oneliner"])
     assert result.exit_code == 0
     assert "nmap" in result.output
+
+
+def test_cli_eval(tmp_path: Path):
+    cfg = write_config(tmp_path)
+    runner.invoke(app, ["--config", str(cfg), "init"])
+    import_post(tmp_path, cfg, "# 永恒之蓝复现\n\nMS17-010 利用记录。")
+    cases = tmp_path / "cases.yaml"
+    cases.write_text("- query: 永恒之蓝\n  expect_any: [永恒之蓝]\n", encoding="utf-8")
+    result = runner.invoke(app, ["--config", str(cfg), "eval", "--cases", str(cases)])
+    assert result.exit_code == 0
+    assert "命中率" in result.output

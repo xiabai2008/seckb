@@ -1,0 +1,20 @@
+- query: "fastjson 反序列化利用"
+  expect_any: ["fastjson"]
+- query: "Windows 内核提权"
+  expect_any: ["windows-kernel-exploits", "提权", "privilege"]
+- query: "Log4Shell 漏洞利用"
+  expect_any: ["CVE-2021-44228", "log4j"]
+- query: "永恒之蓝 MS17-010"
+  expect_any: ["永恒之蓝", "MS17-010", "CVE-2017-0144"]
+- query: "Spring 框架漏洞"
+  expect_any: ["spring"]
+- query: "nmap 端口扫描命令"
+  expect_any: ["nmap"]
+- query: "sqlmap 注入工具"
+  expect_any: ["sqlmap"]
+- query: "容器逃逸"
+  expect_any: ["docker", "kubernetes", "逃逸", "escape"]
+- query: "命令注入 getshell"
+  expect_any: ["RCE", "注入", "execution", "getshell"]
+- query: "Adobe Flash 远程代码执行"
+  expect_any: ["flash", "CVE-2016-4117"]

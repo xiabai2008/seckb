@@ -313,6 +313,30 @@ def sources(ctx: typer.Context) -> None:
 
 
 @app.command()
+def eval(
+    ctx: typer.Context,
+    top: int = typer.Option(5, "--top"),
+    cases: Path = typer.Option(None, "--cases"),
+) -> None:
+    from seckb.eval import DEFAULT_CASES_PATH, load_cases, run_eval
+
+    settings: Settings = ctx.obj
+    conn = _open(settings)
+    retriever = build_retriever(conn, settings)
+    path = Path(cases) if cases else DEFAULT_CASES_PATH
+    report = run_eval(retriever, load_cases(path), top=top)
+    table = Table(title=f"检索评测（命中 {report.passed}/{report.total}）")
+    table.add_column("查询", max_width=30)
+    table.add_column("结果", width=6)
+    table.add_column("Top 命中", max_width=60)
+    for detail in report.details:
+        table.add_row(detail.query, "通过" if detail.passed else "未中", " | ".join(detail.top_titles[:3]))
+    console.print(table)
+    console.print(f"命中率：{report.hit_rate:.0%}")
+    conn.close()
+
+
+@app.command()
 def daemon(ctx: typer.Context) -> None:
     settings: Settings = ctx.obj
     scheduler = build_scheduler(settings)
