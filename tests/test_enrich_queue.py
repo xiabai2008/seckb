@@ -1,4 +1,4 @@
-import json
+﻿import json
 from pathlib import Path
 
 from seckb.enrich.queue import claim_jobs, enqueue, process_jobs, reset_stale
@@ -56,7 +56,6 @@ def make_asset(
 
 def test_process_jobs_creates_card_and_entities(kb, tmp_path: Path):
     asset_id = make_asset(kb, tmp_path)
-    enqueue(kb.conn, asset_id)
     report = process_jobs(kb.conn, kb.settings, FakeLLM())
     assert report.succeeded == 1
     card = kb.conn.execute("SELECT * FROM cards WHERE asset_id = ?", (asset_id,)).fetchone()
@@ -84,8 +83,7 @@ def test_process_jobs_creates_card_and_entities(kb, tmp_path: Path):
 
 
 def test_process_jobs_respects_input_budget(kb, tmp_path: Path):
-    asset_id = make_asset(kb, tmp_path)
-    enqueue(kb.conn, asset_id)
+    make_asset(kb, tmp_path)
     kb.settings.enrich = {"queue": {"max_input_tokens": 10}}
     provider = FakeLLM()
     process_jobs(kb.conn, kb.settings, provider)
@@ -96,7 +94,6 @@ def test_process_jobs_respects_input_budget(kb, tmp_path: Path):
 
 def test_process_jobs_retries_then_fails(kb, tmp_path: Path):
     asset_id = make_asset(kb, tmp_path)
-    enqueue(kb.conn, asset_id)
     kb.settings.enrich = {"queue": {"max_attempts": 1}}
     report = process_jobs(kb.conn, kb.settings, FakeLLM(error="llm down"))
     assert report.failed == 1
@@ -107,16 +104,14 @@ def test_process_jobs_retries_then_fails(kb, tmp_path: Path):
 
 
 def test_process_jobs_skips_done_jobs(kb, tmp_path: Path):
-    asset_id = make_asset(kb, tmp_path)
-    enqueue(kb.conn, asset_id)
+    make_asset(kb, tmp_path)
     process_jobs(kb.conn, kb.settings, FakeLLM())
     report = process_jobs(kb.conn, kb.settings, FakeLLM())
     assert report.processed == 0
 
 
 def test_claim_jobs_marks_running(kb, tmp_path: Path):
-    asset_id = make_asset(kb, tmp_path)
-    enqueue(kb.conn, asset_id)
+    make_asset(kb, tmp_path)
     claimed = claim_jobs(kb.conn, 10)
     assert len(claimed) == 1
     row = kb.conn.execute("SELECT * FROM jobs WHERE id = ?", (claimed[0]["id"],)).fetchone()
@@ -125,8 +120,8 @@ def test_claim_jobs_marks_running(kb, tmp_path: Path):
 
 
 def test_reset_stale_running_jobs(kb, tmp_path: Path):
-    asset_id = make_asset(kb, tmp_path)
-    job_id = enqueue(kb.conn, asset_id)
+    make_asset(kb, tmp_path)
+    job_id = kb.conn.execute("SELECT id FROM jobs").fetchone()[0]
     claim_jobs(kb.conn, 10)
     kb.conn.execute(
         "UPDATE jobs SET updated_at = '2000-01-01T00:00:00+00:00' WHERE id = ?", (job_id,)
@@ -138,14 +133,18 @@ def test_reset_stale_running_jobs(kb, tmp_path: Path):
 
 
 def test_process_jobs_concurrent(kb, tmp_path: Path):
-    ids = [
+    for i in range(4):
         make_asset(kb, tmp_path, f"c{i}.md", f"并发测试 {i}", f"并发正文内容 {i}。")
-        for i in range(4)
-    ]
-    for asset_id in ids:
-        enqueue(kb.conn, asset_id)
     kb.settings.enrich = {"queue": {"concurrency": 4}}
     report = process_jobs(kb.conn, kb.settings, FakeLLM())
     assert report.processed == 4
     assert report.succeeded == 4
     assert kb.conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0] == 4
+
+
+def test_enqueue_adds_pending_job(kb, tmp_path: Path):
+    asset_id = make_asset(kb, tmp_path)
+    before = kb.conn.execute("SELECT COUNT(*) FROM jobs").fetchone()[0]
+    enqueue(kb.conn, asset_id)
+    after = kb.conn.execute("SELECT COUNT(*) FROM jobs").fetchone()[0]
+    assert after == before + 1

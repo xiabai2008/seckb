@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
-from datetime import UTC, datetime
 
 from seckb.config import Settings
 from seckb.connectors.base import RawItem
@@ -72,11 +71,6 @@ def ingest_items(
             extra=item.extra,
         )
         if report.status == "imported" and report.asset_id is not None:
-            conn.execute(
-                "INSERT INTO jobs(asset_id, kind, status, created_at) VALUES(?, 'summary', 'pending', ?)",
-                (report.asset_id, datetime.now(UTC).isoformat(timespec="seconds")),
-            )
-            conn.commit()
             stats.imported += 1
         else:
             stats.duplicated += 1

@@ -231,6 +231,10 @@ def import_file(
         )
 
     fts.index_asset(conn, asset_id)
+    conn.execute(
+        "INSERT INTO jobs(asset_id, kind, status, created_at) VALUES(?, 'summary', 'pending', ?)",
+        (asset_id, now),
+    )
     conn.commit()
     return ImportReport("imported", asset_id, md_rel)
 
