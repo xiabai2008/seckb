@@ -25,3 +25,13 @@ def test_build_scheduler_registers_jobs():
     scheduler = build_scheduler(settings)
     ids = sorted(job.id for job in scheduler.get_jobs())
     assert ids == ["collect:nvd", "collect:rss", "enrich"]
+
+
+def test_build_scheduler_registers_embed_and_index():
+    settings = Settings(
+        kb_root=Path("D:/KB"),
+        schedule={"embed": {"every_minutes": 30}, "index": {"every_minutes": 30}},
+    )
+    scheduler = build_scheduler(settings)
+    ids = sorted(job.id for job in scheduler.get_jobs())
+    assert ids == ["embed", "index"]

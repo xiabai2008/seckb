@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 from seckb.collect import collect_all
@@ -7,6 +9,11 @@ from seckb.config import Settings, load_settings
 from seckb.db.connection import init_db
 from seckb.enrich.llm import build_provider
 from seckb.enrich.queue import process_jobs
+from seckb.indexer.meili import build_meili_client
+from seckb.indexer.meili import rebuild as rebuild_meili
+from seckb.indexer.vectors import build_embedder, index_assets
+
+logger = logging.getLogger("seckb.daemon")
 
 
 def parse_cron(expr: str) -> dict:
@@ -42,6 +49,35 @@ def _enrich_job() -> None:
         conn.close()
 
 
+def _embed_job() -> None:
+    settings = load_settings()
+    try:
+        embedder = build_embedder(settings.enrich)
+    except Exception:  # noqa: BLE001 - 配置异常时跳过本轮
+        return
+    conn = init_db(settings.kb_root)
+    try:
+        asset_ids = [row["id"] for row in conn.execute("SELECT id FROM assets ORDER BY id")]
+        index_assets(conn, settings, embedder, asset_ids, batch_size=500)
+    except Exception:
+        logger.exception("embed 任务失败，本轮跳过")
+    finally:
+        conn.close()
+
+
+def _index_job() -> None:
+    settings = load_settings()
+    conn = init_db(settings.kb_root)
+    try:
+        client = build_meili_client(settings.enrich)
+        client.ensure_index()
+        rebuild_meili(conn, client)
+    except Exception:
+        logger.exception("index 任务失败，本轮跳过")
+    finally:
+        conn.close()
+
+
 def build_scheduler(settings: Settings) -> BlockingScheduler:
     scheduler = BlockingScheduler()
     for name, expr in (settings.schedule.get("collect") or {}).items():
@@ -52,12 +88,13 @@ def build_scheduler(settings: Settings) -> BlockingScheduler:
             kwargs={"source": name},
             **parse_cron(expr),
         )
-    every_minutes = (settings.schedule.get("enrich") or {}).get("every_minutes")
-    if every_minutes:
-        scheduler.add_job(
-            _enrich_job,
-            "interval",
-            id="enrich",
-            minutes=int(every_minutes),
-        )
+    for key, job_func in (("enrich", _enrich_job), ("embed", _embed_job), ("index", _index_job)):
+        every_minutes = (settings.schedule.get(key) or {}).get("every_minutes")
+        if every_minutes:
+            scheduler.add_job(
+                job_func,
+                "interval",
+                id=key,
+                minutes=int(every_minutes),
+            )
     return scheduler

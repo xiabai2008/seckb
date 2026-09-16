@@ -7,3 +7,7 @@ collect:
   vulhub: "0 5 * * 0"
 enrich:
   every_minutes: 10
+embed:
+  every_minutes: 30
+index:
+  every_minutes: 30
