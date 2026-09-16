@@ -2,7 +2,7 @@ from pathlib import Path
 
 from seckb.pipeline.importer import import_file
 from seckb.retrieval import HybridRetriever
-from seckb.tools import kb_card, kb_search
+from seckb.tools import kb_card, kb_get, kb_search, kb_snippets
 
 
 def make_asset(kb, tmp_path: Path, name: str, title: str, body: str) -> int:
@@ -58,3 +58,43 @@ def test_kb_card_returns_card_fields(kb, tmp_path: Path):
 
 def test_kb_card_missing_returns_none(kb):
     assert kb_card(kb.conn, 99999) is None
+
+
+def test_kb_get_returns_sections_and_truncates(kb, tmp_path: Path):
+    body = "## 第一节\n\n" + "第一节内容。" * 40 + "\n\n## 第二节\n\n第二节内容。"
+    asset_id = make_asset(kb, tmp_path, "a.md", "提权笔记", body)
+    full = kb_get(kb.conn, asset_id, max_tokens=10000)
+    assert full["truncated"] is False
+    assert "第一节内容" in full["content"]
+    assert any("第二节" in section for section in full["sections"])
+
+    section = kb_get(kb.conn, asset_id, section="第一节", max_tokens=10000)
+    assert "第一节内容" in section["content"]
+    assert "第二节内容" not in section["content"]
+
+    clipped = kb_get(kb.conn, asset_id, max_tokens=30)
+    assert clipped["truncated"] is True
+    assert clipped["token_estimate"] <= 60
+
+
+def test_kb_get_missing_returns_none(kb):
+    assert kb_get(kb.conn, 99999) is None
+
+
+def test_kb_snippets_filters(kb, tmp_path: Path):
+    asset_id = make_asset(
+        kb,
+        tmp_path,
+        "a.md",
+        "nmap 笔记",
+        "扫描记录：\n\n```bash\nnmap -sV -p445 10.0.0.1\n```\n",
+    )
+    resp = kb_snippets(kb.conn, query="nmap -sV")
+    assert resp["count"] >= 1
+    assert resp["snippets"][0]["asset_id"] == asset_id
+    assert resp["snippets"][0]["kind"] == "oneliner"
+    assert resp["snippets"][0]["tool"] is None
+    by_kind = kb_snippets(kb.conn, kind="oneliner")
+    assert by_kind["count"] >= 1
+    empty = kb_snippets(kb.conn, query="绝不存在的片段xyz")
+    assert empty["count"] == 0
