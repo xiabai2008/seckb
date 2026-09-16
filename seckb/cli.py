@@ -316,7 +316,7 @@ def sources(ctx: typer.Context) -> None:
 def eval(
     ctx: typer.Context,
     top: int = typer.Option(5, "--top"),
-    cases: Path = typer.Option(None, "--cases"),
+    cases: Annotated[Path | None, typer.Option("--cases")] = None,
 ) -> None:
     from seckb.eval import DEFAULT_CASES_PATH, load_cases, run_eval
 

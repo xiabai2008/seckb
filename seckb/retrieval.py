@@ -92,7 +92,7 @@ def _snippet(conn: sqlite3.Connection, chunk_id: int | None) -> str:
     return text[:SNIPPET_LIMIT]
 
 
-def build_retriever(conn: sqlite3.Connection, settings: Settings) -> "HybridRetriever":
+def build_retriever(conn: sqlite3.Connection, settings: Settings) -> HybridRetriever:
     from seckb.indexer.meili import build_meili_client
     from seckb.indexer.vectors import build_embedder
 

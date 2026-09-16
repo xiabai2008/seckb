@@ -3,7 +3,7 @@ from pathlib import Path
 from seckb.indexer.meili import MeiliError
 from seckb.indexer.vectors import EmbeddingError, FakeEmbedder, index_assets
 from seckb.pipeline.importer import import_file
-from seckb.retrieval import Candidate, FusedCandidate, HybridRetriever, rrf_fuse
+from seckb.retrieval import Candidate, HybridRetriever, rrf_fuse
 
 
 def test_rrf_fuse_single_pool_keeps_order():
