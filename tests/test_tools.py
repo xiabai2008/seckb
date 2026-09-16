@@ -98,3 +98,21 @@ def test_kb_snippets_filters(kb, tmp_path: Path):
     assert by_kind["count"] >= 1
     empty = kb_snippets(kb.conn, query="绝不存在的片段xyz")
     assert empty["count"] == 0
+
+
+def test_kb_card_includes_cve_structured_fields(kb, tmp_path: Path):
+    src = tmp_path / "cve.md"
+    src.write_text("# CVE-2017-0144\n\nSMBv1 远程代码执行。", encoding="utf-8")
+    asset_id = import_file(
+        kb.conn,
+        kb.settings,
+        src,
+        asset_type="cve",
+        source="kev",
+        source_id="CVE-2017-0144",
+        extra={"cve_id": "CVE-2017-0144", "cvss": 9.8, "cwe": "CWE-311", "in_kev": True},
+    ).asset_id
+    card = kb_card(kb.conn, asset_id)
+    assert card["cve"]["cvss"] == 9.8
+    assert card["cve"]["cwe"] == "CWE-311"
+    assert card["cve"]["in_kev"] is True

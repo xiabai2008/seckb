@@ -49,8 +49,12 @@ def kb_card(conn: sqlite3.Connection, asset_id: int) -> dict | None:
     row = conn.execute(
         """
         SELECT a.title, a.type, a.lang, a.tags, a.category, a.source, a.source_url,
-               a.published_at, c.summary, c.key_takeaways, c.card_json, c.model, c.generated_at
-        FROM assets a LEFT JOIN cards c ON c.asset_id = a.id
+               a.published_at, c.summary, c.key_takeaways, c.card_json, c.model, c.generated_at,
+               v.cve_id AS cve_cve_id, v.cvss AS cve_cvss, v.cwe AS cve_cwe,
+               v.poc_refs AS cve_poc_refs, v.in_kev AS cve_in_kev
+        FROM assets a
+        LEFT JOIN cards c ON c.asset_id = a.id
+        LEFT JOIN cves v ON v.asset_id = a.id
         WHERE a.id = ?
         """,
         (asset_id,),
@@ -63,6 +67,15 @@ def kb_card(conn: sqlite3.Connection, asset_id: int) -> dict | None:
             card_json = json.loads(row["card_json"])
         except json.JSONDecodeError:
             card_json = {}
+    cve = None
+    if row["type"] == "cve":
+        cve = {
+            "cve_id": row["cve_cve_id"],
+            "cvss": row["cve_cvss"],
+            "cwe": row["cve_cwe"],
+            "in_kev": bool(row["cve_in_kev"]),
+            "poc_refs": json.loads(row["cve_poc_refs"] or "[]"),
+        }
     return {
         "asset_id": asset_id,
         "title": row["title"],
@@ -77,6 +90,7 @@ def kb_card(conn: sqlite3.Connection, asset_id: int) -> dict | None:
         "summary": row["summary"] or "",
         "key_takeaways": json.loads(row["key_takeaways"] or "[]"),
         "entities": card_json.get("entities", {}),
+        "cve": cve,
         "model": row["model"],
         "generated_at": row["generated_at"],
     }
