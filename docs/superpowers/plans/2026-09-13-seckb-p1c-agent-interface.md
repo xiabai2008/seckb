@@ -1301,6 +1301,10 @@ def serve(ctx: typer.Context, port: int = typer.Option(8011, "--port")) -> None:
 Run: `.venv\Scripts\python.exe -m pytest tests/test_api.py -v`
 Expected: `3 passed`
 
+> 执行记录（2026-09-16）：两处最小实现偏差，测试未改、断言未放宽。
+> 1) FastAPI 把同步端点调度到线程池执行，而连接在测试主线程创建，`sqlite3` 线程亲和报 `ProgrammingError`；`seckb/db/connection.py` 的 `open_db` 改为 `sqlite3.connect(..., check_same_thread=False)`（Python 3.12 sqlite3 为 serialized 模式，跨线程共享安全）。
+> 2) 计划内部矛盾：本任务测试要求单切片文档在 `max_tokens=20` 时 `truncated is True or token_estimate <= 40`，但 Task 4 的 `kb_get` 中 `if parts and ...` 守卫使首块永远豁免预算（实测响应 `{"truncated": false, "token_estimate": 50}`）。移除守卫使预算对首块同样生效，Task 4/5/6 既有测试语义不变（`tests/test_tools.py`、`tests/test_cli_v3.py` 全绿）。
+
 - [ ] **Step 5: 提交**
 
 ```powershell

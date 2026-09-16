@@ -111,7 +111,7 @@ def kb_get(
         heading = (row["heading_path"] or "").strip()
         block = f"[{heading}]\n{row['content_md']}" if heading else row["content_md"]
         block_tokens = estimate_tokens(block)
-        if parts and total + block_tokens > max_tokens:
+        if total + block_tokens > max_tokens:
             truncated = True
             break
         parts.append(block)

@@ -172,6 +172,20 @@ def mcp(ctx: typer.Context) -> None:
 
 
 @app.command()
+def serve(ctx: typer.Context, port: int = typer.Option(8011, "--port")) -> None:
+    import uvicorn
+
+    from seckb.api import create_app
+
+    settings: Settings = ctx.obj
+    conn = _open(settings)
+    retriever = build_retriever(conn, settings)
+    application = create_app(conn, settings, retriever)
+    console.print(f"HTTP API 监听 http://127.0.0.1:{port}（Ctrl+C 停止）")
+    uvicorn.run(application, host="127.0.0.1", port=port, log_level="warning")
+
+
+@app.command()
 def stats(ctx: typer.Context) -> None:
     settings: Settings = ctx.obj
     conn = _open(settings)
