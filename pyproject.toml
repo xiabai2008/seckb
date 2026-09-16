@@ -16,6 +16,9 @@ dependencies = [
     "feedparser>=6.0",
     "apscheduler>=3.10",
     "lancedb>=0.15",
+    "mcp>=1.2",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
 ]
 
 [project.optional-dependencies]
