@@ -436,6 +436,8 @@ class HybridRetriever:
 Run: `.venv\Scripts\python.exe -m pytest tests/test_retrieval.py -v`
 Expected: `6 passed`
 
+> 执行记录（2026-09-13）：发现 `search_vectors` 在无索引表时提前返回，嵌入后端故障无法被检测；已将 `embedder.embed` 调用移到早退判断之前（`seckb/indexer/vectors.py`），使 vector 降级可被感知，既有测试语义不变。
+
 - [ ] **Step 5: 提交**
 
 ```powershell

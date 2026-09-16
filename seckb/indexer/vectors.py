@@ -193,12 +193,12 @@ def search_vectors(
     settings: Settings, embedder: Embedder, query: str, *, limit: int = 10
 ) -> list[VectorHit]:
     db = _connect(settings)
+    vector = embedder.embed([query])[0]
     if not _table_exists(db):
         return []
     table = db.open_table(TABLE)
     if table.count_rows() == 0:
         return []
-    vector = embedder.embed([query])[0]
     hits: list[VectorHit] = []
     for row in table.search(vector).limit(limit).to_list():
         distance = float(row.get("_distance", 0.0))
