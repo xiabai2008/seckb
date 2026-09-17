@@ -23,7 +23,8 @@ def main() -> None:
     args = parser.parse_args()
 
     settings = load_settings()
-    conn = sqlite3.connect(settings.db_path)
+    conn = sqlite3.connect(settings.db_path, timeout=30)
+    conn.execute("PRAGMA busy_timeout = 30000")
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
         """

@@ -6,7 +6,8 @@ PROMPT_TEMPLATE = """你是网络安全知识库的编目助手。阅读下面�
 要求：
 - tags 用中文或英文短词，3~8 个
 - entities 只填资料中真实出现的 CVE 编号、工具名、ATT&CK 技术号、OWASP 分类、产品名
-- snippets 只提取资料中的命令、载荷、代码，不要杜撰
+- snippets 只提取资料中的命令、载荷、代码，不要杜撰；最多 6 条，只保留最核心的
+- summary 控制在 120 字以内
 - summary 必须基于资料内容
 
 标题：{title}
