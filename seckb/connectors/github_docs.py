@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from collections.abc import Callable
 from urllib.parse import quote
@@ -24,21 +25,25 @@ class GitHubDocsConnector:
         client: httpx.Client,
         *,
         repos: list[dict],
+        file_delay: float = 0.15,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self.name = name
         self.client = client
         self.repos = repos
+        self.file_delay = file_delay
         self.sleep = sleep
 
-    def _tree_paths(self, repo: str) -> list[str]:
+    def _tree(self, repo: str) -> tuple[str, list[str]]:
         data = fetch_json(
             self.client,
             f"{API_ROOT}/repos/{repo}/git/trees/HEAD",
             params={"recursive": "1"},
             sleep=self.sleep,
         )
-        return [node["path"] for node in data.get("tree", []) if node.get("type") == "blob"]
+        sha = data.get("sha") or ""
+        paths = [node["path"] for node in data.get("tree", []) if node.get("type") == "blob"]
+        return sha, paths
 
     def _select(self, paths: list[str], config: dict) -> list[str]:
         includes = list(config.get("include_prefixes") or [])
@@ -59,18 +64,28 @@ class GitHubDocsConnector:
         return selected
 
     def fetch(self, cursor: str | None) -> tuple[list[RawItem], str | None]:
+        state: dict[str, str] = {}
+        if cursor:
+            try:
+                state = json.loads(cursor)
+            except json.JSONDecodeError:
+                state = {}
         items: list[RawItem] = []
         for config in self.repos:
             repo = config["repo"]
             try:
-                paths = self._tree_paths(repo)
+                tree_sha, paths = self._tree(repo)
             except FetchError:
                 continue
+            if tree_sha and state.get(repo) == tree_sha:
+                continue
+            failed = False
             for path in self._select(paths, config):
                 raw_url = f"{RAW_ROOT}/{repo}/HEAD/{quote(path, safe='/')}"
                 try:
                     content = fetch_text(self.client, raw_url, sleep=self.sleep)
                 except FetchError:
+                    failed = True
                     continue
                 if not content.strip():
                     continue
@@ -88,4 +103,8 @@ class GitHubDocsConnector:
                         extra={"site": f"https://github.com/{repo}", "path": path},
                     )
                 )
-        return items, cursor
+                if self.file_delay:
+                    self.sleep(self.file_delay)
+            if tree_sha and not failed:
+                state[repo] = tree_sha
+        return items, json.dumps(state)

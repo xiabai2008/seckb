@@ -6,6 +6,8 @@ collect:
   exploitdb: "0 5 * * *"
   vulhub: "0 5 * * 0"
   github_docs: "0 6 * * 1"
+  github_docs_zh: "0 7 * * 1"
+  github_docs_std: "30 7 * * 1"
 enrich:
   every_minutes: 10
 embed:

@@ -28,6 +28,7 @@ def build_connector(name: str, config: dict, client: httpx.Client) -> Connector:
             name,
             client,
             repos=list(config.get("repos") or []),
+            file_delay=float(config.get("file_delay", 0.15)),
         )
     if kind == "nvd":
         return NVDConnector(

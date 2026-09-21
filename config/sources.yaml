@@ -4,9 +4,13 @@ sources:
     feeds:
       - https://www.freebuf.com/feed
       - https://api.anquanke.com/data/v1/rss
+      - https://xz.aliyun.com/feed
+      - https://www.4hou.com/feed
       - https://kitploit.com/feeds/posts/default
       - https://hnrss.org/newest?q=security
       - https://www.oschina.net/news/rss?show=sec
+      - https://unit42.paloaltonetworks.com/feed/
+      - https://research.checkpoint.com/feed/
   github:
     type: github
     search_queries:
@@ -51,3 +55,23 @@ sources:
         max_files: 400
       - repo: Bypass007/Emergency-Response-Notes
         max_files: 100
+  github_docs_zh:
+    type: github_docs
+    file_delay: 0.2
+    repos:
+      - repo: Threekiii/Vulnerability-Wiki
+        max_files: 900
+      - repo: ctf-wiki/ctf-wiki
+        include_prefixes: ["docs/"]
+        max_files: 600
+      - repo: Ascotbe/Kernelhub
+        max_files: 250
+  github_docs_std:
+    type: github_docs
+    file_delay: 0.2
+    repos:
+      - repo: OWASP/wstg
+        max_files: 200
+      - repo: OWASP/CheatSheetSeries
+        include_prefixes: ["cheatsheets/"]
+        max_files: 200

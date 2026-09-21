@@ -1,3 +1,5 @@
+import json
+
 import httpx
 
 from seckb.connectors.github_docs import GitHubDocsConnector
@@ -63,7 +65,7 @@ def test_github_docs_filters_and_caps():
     assert first.url == "https://github.com/owner/kb/blob/HEAD/src/alpha.md"
     assert "# Alpha 技术" in first.content
     assert first.extra["site"] == "https://github.com/owner/kb"
-    assert cursor is None
+    assert json.loads(cursor) == {}
 
 
 def test_github_docs_extensionless_files():
@@ -109,3 +111,18 @@ def test_github_docs_skips_failed_downloads():
     )
     items, _ = connector.fetch(None)
     assert [item.source_id for item in items] == ["owner/kb/src/ok.md"]
+
+
+def test_github_docs_cursor_skips_unchanged_repo():
+    tree = {"sha": "abc123", "tree": [{"path": "src/a.md", "type": "blob"}]}
+    bodies = {"src/a.md": "# A\n\n内容。"}
+    client = build_client(transport=httpx.MockTransport(make_handler(tree, bodies)))
+    connector = GitHubDocsConnector(
+        "github_docs", client, repos=[{"repo": "owner/kb"}], sleep=lambda _: None
+    )
+    items, cursor = connector.fetch(None)
+    assert len(items) == 1
+    assert json.loads(cursor) == {"owner/kb": "abc123"}
+    items2, cursor2 = connector.fetch(cursor)
+    assert items2 == []
+    assert json.loads(cursor2) == {"owner/kb": "abc123"}
