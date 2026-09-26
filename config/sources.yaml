@@ -75,3 +75,8 @@ sources:
       - repo: OWASP/CheatSheetSeries
         include_prefixes: ["cheatsheets/"]
         max_files: 200
+      # yaklang/hack-skills（2026-09-27 并入）：面向 Agent 的攻击技能库
+      # （103 深度技能 + 主/分类入口），skills/*/SKILL.md 为主，深度原文
+      # （如 JAVA_GADGET_CHAINS.md）一并收录供 kb_get 切片深读
+      - repo: yaklang/hack-skills
+        max_files: 400
