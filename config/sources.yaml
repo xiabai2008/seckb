@@ -80,3 +80,13 @@ sources:
       # （如 JAVA_GADGET_CHAINS.md）一并收录供 kb_get 切片深读
       - repo: yaklang/hack-skills
         max_files: 400
+      # ljagiello/ctf-skills（2026-09-27 并入）：Agent Skills 规范的 CTF 技能库
+      # （10 个 ctf-* 分类：web/pwn/crypto/reverse/forensics/osint/ai-ml/
+      #  malware/misc/writeup + solve-challenge 总路由）。技能目录在仓库根下，
+      # 每个 SKILL.md ≤500 行，参考文档（pat-reference/unicorn-emulation/
+      # post-quantum 等）一并收录。补齐 hack-skills 缺失的 crypto/pwn/
+      # reverse/forensics 四类
+      - repo: ljagiello/ctf-skills
+        include_prefixes: ["ctf-", "solve-challenge/"]
+        exclude_prefixes: ["ctf-web/payloads/"]
+        max_files: 300
