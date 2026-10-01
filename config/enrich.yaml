@@ -16,5 +16,5 @@ embedding:
   base_url: http://127.0.0.1:11434
   model: bge-m3
 meili:
-  base_url: http://127.0.0.1:7700
+  base_url: http://127.0.0.1:9011
   api_key_env: MEILI_MASTER_KEY
