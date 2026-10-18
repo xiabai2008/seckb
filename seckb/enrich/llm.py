@@ -34,6 +34,7 @@ class OpenAICompatProvider:
         max_tokens: int = 1600,
         attempts: int = 3,
         extra_headers: dict[str, str] | None = None,
+        thinking: str | None = None,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self.base_url = base_url.rstrip("/")
@@ -44,6 +45,7 @@ class OpenAICompatProvider:
         self.max_tokens = max_tokens
         self.attempts = attempts
         self.extra_headers = dict(extra_headers or {})
+        self.thinking = thinking
         self.sleep = sleep
 
     def complete(self, prompt: str) -> str:
@@ -54,6 +56,11 @@ class OpenAICompatProvider:
             "max_tokens": self.max_tokens,
             "messages": [{"role": "user", "content": prompt}],
         }
+        # DeepSeek 系模型默认开启 thinking 且 effort=high，富化是结构化抽取，
+        # 思考 token 约占输出 75%，关掉可显著降本
+        if self.thinking:
+            payload["thinking"] = {"type": self.thinking}
+
         headers = {"Authorization": f"Bearer {self.api_key}", **self.extra_headers}
         for attempt in range(1, self.attempts + 1):
             response = self.client.post(url, json=payload, headers=headers)
@@ -85,4 +92,5 @@ def build_provider(config: dict, *, client: httpx.Client | None = None) -> LLMPr
             str(key): str(value)
             for key, value in (provider_config.get("headers") or {}).items()
         },
+        thinking=provider_config.get("thinking") or None,
     )
