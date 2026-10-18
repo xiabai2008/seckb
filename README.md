@@ -3,6 +3,7 @@
 > 把安全知识预先采集、结构化，做成 **Agent 能秒查的形态**：本地、带出处、按 token 预算取用。
 
 [![CI](https://github.com/xiabai2008/seckb/actions/workflows/ci.yml/badge.svg)](https://github.com/xiabai2008/seckb/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/xiabai2008/seckb?sort=semver)](https://github.com/xiabai2008/seckb/releases)
 [![Python](https://img.shields.io/badge/python-3.12-3776ab?logo=python&logoColor=white)](pyproject.toml)
 [![MCP](https://img.shields.io/badge/MCP-stdio%20server-8a63d2)](seckb/mcp_server.py)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
