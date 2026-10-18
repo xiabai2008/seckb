@@ -50,8 +50,12 @@ def collect(conn: sqlite3.Connection) -> dict:
     now = datetime.now(timezone.utc)
 
     scale = {
-        t: conn.execute(f"SELECT count(*) FROM {t}").fetchone()[0]
-        for t in ("assets", "chunks", "cards", "snippets", "entities", "cves")
+        "assets": conn.execute("SELECT count(*) FROM assets").fetchone()[0],
+        "chunks": conn.execute("SELECT count(*) FROM chunks").fetchone()[0],
+        "cards": conn.execute("SELECT count(*) FROM cards").fetchone()[0],
+        "snippets": conn.execute("SELECT count(*) FROM snippets").fetchone()[0],
+        "entities": conn.execute("SELECT count(*) FROM entities").fetchone()[0],
+        "cves": conn.execute("SELECT count(*) FROM cves").fetchone()[0],
     }
 
     sources = []

@@ -67,3 +67,5 @@ CREATE TABLE cves (
   poc_refs TEXT,
   in_kev INTEGER NOT NULL DEFAULT 0
 );
+
+PRAGMA user_version = 2;

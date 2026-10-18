@@ -87,3 +87,5 @@ CREATE VIRTUAL TABLE chunks_fts USING fts5(
   asset_id UNINDEXED,
   tokenize = 'trigram'
 );
+
+PRAGMA user_version = 1;

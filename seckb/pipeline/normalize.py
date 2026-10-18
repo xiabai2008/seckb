@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ipaddress
 import re
+import socket
 import urllib.request
 from collections.abc import Callable
 from pathlib import Path
@@ -12,21 +14,67 @@ from readability import Document
 Fetcher = Callable[[str], bytes]
 
 _IMG_RE = re.compile(r"!\[([^\]]*)\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
+_ALLOWED_IMG_SCHEMES = frozenset({"http", "https"})
 
 
 class ScannedPdfError(Exception):
     pass
 
 
+class BlockedImageError(ValueError):
+    """图片地址被安全策略拒绝（非公网 http(s) 地址）。"""
+
+
+def _ensure_public_url(url: str) -> None:
+    """抓图前校验：只允许指向公网主机的 http(s) 地址。
+
+    图片链接来自被采集的第三方页面，属不可信输入，不加限制就等于把采集器
+    变成内网探测工具。域名解析后逐个校验解析结果，避免 DNS 指向内网。
+    """
+    parts = urlsplit(url)
+    if parts.scheme not in _ALLOWED_IMG_SCHEMES:
+        raise BlockedImageError(f"仅允许 http/https 图片地址，收到: {parts.scheme or '(无协议)'}")
+    host = parts.hostname
+    if not host:
+        raise BlockedImageError("图片地址缺少主机名")
+    port = parts.port or (443 if parts.scheme == "https" else 80)
+    try:
+        infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    except OSError as exc:
+        raise BlockedImageError(f"图片地址无法解析: {host}") from exc
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except ValueError as exc:
+            raise BlockedImageError(f"图片地址解析结果异常: {info[4][0]}") from exc
+        if not ip.is_global or ip.is_multicast:
+            raise BlockedImageError(f"图片地址解析到非公网地址: {ip}")
+
+
+class _PublicOnlyRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """重定向也要过公网校验，否则公网 URL 可以 302 到内网。"""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        _ensure_public_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_PUBLIC_OPENER = urllib.request.build_opener(_PublicOnlyRedirectHandler)
+
+
 def _default_fetcher(url: str) -> bytes:
+    _ensure_public_url(url)
     request = urllib.request.Request(url, headers={"User-Agent": "seckb/0.1"})
-    with urllib.request.urlopen(request, timeout=20) as response:
+    with _PUBLIC_OPENER.open(request, timeout=20) as response:
         return response.read()
 
 
 def _read_image(src: str, base_dir: Path | None, fetcher: Fetcher) -> tuple[bytes | None, str]:
     if src.startswith(("http://", "https://")):
-        data = fetcher(src)
+        try:
+            data = fetcher(src)
+        except BlockedImageError:
+            return None, ""  # 单张图片被拒不应中断整篇入库
         suffix = Path(urlsplit(src).path).suffix.lower() or ".img"
         return data, suffix
     if base_dir is not None:

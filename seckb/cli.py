@@ -312,12 +312,13 @@ def sources(ctx: typer.Context) -> None:
     conn.close()
 
 
-@app.command()
-def eval(
+@app.command("eval")
+def eval_cmd(
     ctx: typer.Context,
     top: int = typer.Option(5, "--top"),
     cases: Annotated[Path | None, typer.Option("--cases")] = None,
 ) -> None:
+    """检索质量评测（命令名保持 `eval`，函数名避开内置 eval）。"""
     from seckb.eval import DEFAULT_CASES_PATH, load_cases, run_eval
 
     settings: Settings = ctx.obj

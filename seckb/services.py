@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import ipaddress
 import json
 import os
 import shutil
+import socket
 import subprocess
 import sys
 import time
 from collections.abc import Callable
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -15,15 +18,46 @@ from seckb.config import Settings
 
 VALID_TARGETS = ("search", "collect", "all")
 OLLAMA_PROBE = "http://127.0.0.1:11434/api/tags"
+LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 
 
 def _default_runner(cmd: list[str]) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=False)
+    return subprocess.run(
+        cmd, capture_output=True, text=True, timeout=60, check=False, shell=False
+    )
+
+
+def _loopback_probe_url(url: str) -> str | None:
+    """把探测地址收敛到本机 http 端点，其余一律返回 None（不发起请求）。
+
+    Ollama 与 Meilisearch 都按设计跑在本机；探针接收 URL 参数，若不校验就
+    等同于一个任意地址请求器。除协议与主机名外，解析结果也逐个校验，避免
+    主机名指向本机以外的地址。
+    """
+    parts = urlsplit(url)
+    if parts.scheme != "http" or parts.hostname not in LOOPBACK_HOSTS:
+        return None
+    port = parts.port or 80
+    try:
+        infos = socket.getaddrinfo(parts.hostname, port, type=socket.SOCK_STREAM)
+    except OSError:
+        return None
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except ValueError:
+            return None
+        if not ip.is_loopback:
+            return None
+    return f"http://{parts.hostname}:{port}{parts.path or '/'}"
 
 
 def _default_probe(url: str) -> bool:
+    target = _loopback_probe_url(url)
+    if target is None:
+        return False
     try:
-        return 200 <= httpx.get(url, timeout=4).status_code < 300
+        return 200 <= httpx.get(target, timeout=4).status_code < 300
     except Exception:  # noqa: BLE001 - 服务未启动即为探测失败
         return False
 

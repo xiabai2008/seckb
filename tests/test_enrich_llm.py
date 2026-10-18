@@ -7,7 +7,7 @@ from seckb.net import build_client
 
 def test_complete_success():
     def handler(request: httpx.Request) -> httpx.Response:
-        assert request.headers["Authorization"] == "Bearer test-key"
+        assert request.headers["Authorization"] == "Bearer k"
         return httpx.Response(
             200, json={"choices": [{"message": {"content": '{"summary": "ok"}'}}]}
         )
@@ -15,7 +15,7 @@ def test_complete_success():
     client = build_client(transport=httpx.MockTransport(handler))
     provider = OpenAICompatProvider(
         base_url="https://api.example.com/v1",
-        api_key="test-key",
+        api_key="k",
         model="test-model",
         client=client,
         sleep=lambda _: None,
