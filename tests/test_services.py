@@ -47,7 +47,7 @@ def make_manager(kb, runner: FakeRunner, probe: FakeProbe) -> ServiceManager:
     ollama_exe.write_bytes(b"stub")
     return ServiceManager(
         kb.settings,
-        repo_root=Path(r"D:/HZR_PROJECTS/seckb"),
+        repo_root=Path(__file__).resolve().parents[1],
         runner=runner,
         probe=probe,
         ollama_exe=str(ollama_exe),

@@ -7,11 +7,11 @@ importer 对 markdown 导入后 unlink 源文件（26 次 < 50 阈值）。
 """
 from __future__ import annotations
 
-import sqlite3
 import sys
 from pathlib import Path
 
-sys.path.insert(0, "D:/HZR_PROJECTS/seckb")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 import httpx  # noqa: E402
 
 from seckb.config import load_settings  # noqa: E402
@@ -20,7 +20,6 @@ from seckb.pipeline.importer import import_file  # noqa: E402
 
 REPO = "ljagiello/ctf-skills"
 RAW = "https://raw.githubusercontent.com/ljagiello/ctf-skills/HEAD/"
-DB = "D:/SecurityKB/meta/catalog.db"
 
 missing = [
     "ctf-reverse/unicorn-emulation.md",
@@ -51,16 +50,15 @@ missing = [
     "solve-challenge/SKILL.md",
 ]
 
-con = sqlite3.connect(DB)
-row = con.execute(
+settings = load_settings(REPO_ROOT / "config")
+conn = init_db(settings.kb_root)
+
+row = conn.execute(
     "SELECT source FROM assets WHERE source_url LIKE '%ljagiello%' LIMIT 1"
 ).fetchone()
 source = row[0] if row else "github_docs_std"
-con.close()
 print("reuse source:", source)
 
-settings = load_settings(Path("D:/HZR_PROJECTS/seckb/config"))
-conn = init_db(settings.kb_root)
 staging = settings.kb_root / "meta" / "tmp" / "ctfskills-manual"
 staging.mkdir(parents=True, exist_ok=True)
 
