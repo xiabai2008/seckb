@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import sqlite3
@@ -124,7 +125,11 @@ def import_file(
 
     if result.source_type == "markdown":
         orig_rel = md_rel
-        src.unlink()
+        # 批量采集（NVD 一次数千条）时每条都要删一次临时文件，累计超过执行环境的
+        # 批量删除阈值（50 次/回合）会直接中断采集。默认保留临时文件，
+        # 由 scripts/clean_tmp.py 分批清理；设 SECKB_DELETE_TMP=1 可恢复旧行为。
+        if os.environ.get("SECKB_DELETE_TMP") == "1":
+            src.unlink()
     else:
         orig_path = out_dir / f"{stem}{src.suffix.lower()}"
         shutil.move(str(src), str(orig_path))

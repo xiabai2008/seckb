@@ -23,9 +23,17 @@ def test_import_markdown_post(kb, tmp_path: Path):
     assert row["lang"] == "zh"
     assert row["path"] == row["md_path"]
     assert "永恒之蓝" in row["title"]
-    assert not src.exists()
+    assert src.exists()
     md_files = list((kb.root / "posts" / "zh").glob("*.md"))
     assert len(md_files) == 1
+
+
+def test_import_markdown_deletes_tmp_with_env(kb, tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("SECKB_DELETE_TMP", "1")
+    src = write_post(tmp_path)
+    report = import_file(kb.conn, kb.settings, src)
+    assert report.status == "imported"
+    assert not src.exists()
 
 
 def test_import_creates_chunks_and_snippets(kb, tmp_path: Path):
@@ -80,7 +88,8 @@ def test_scan_inbox(kb, tmp_path: Path):
     write_post(kb.root / "inbox", "two.md", "# XSS 笔记\n\n反射型 xss 的利用与绕过，配合 csrf 链式利用。")
     reports = scan_inbox(kb.conn, kb.settings)
     assert [r.status for r in reports] == ["imported", "imported"]
-    assert not list((kb.root / "inbox").iterdir())
+    again = scan_inbox(kb.conn, kb.settings)
+    assert [r.status for r in again] == ["duplicated", "duplicated"]
 
 
 def test_book_gets_sidecar_meta(kb, tmp_path: Path):
