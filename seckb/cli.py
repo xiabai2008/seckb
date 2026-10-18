@@ -167,7 +167,7 @@ def snippets(
 def mcp(ctx: typer.Context) -> None:
     from seckb.mcp_server import run_stdio
 
-    Console(stderr=True).print("seckb MCP server 启动（stdio），Ctrl+C 停止")
+    Console(stderr=True).print("seckb MCP server started (stdio) - Ctrl+C to stop")
     run_stdio()
 
 
