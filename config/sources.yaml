@@ -55,6 +55,47 @@ sources:
         max_files: 400
       - repo: Bypass007/Emergency-Response-Notes
         max_files: 100
+  github_docs_audit:
+    type: github_docs
+    file_delay: 0.2
+    repos:
+      # Java 代码审计中文笔记（service 毕设方向）
+      - repo: cn-panda/JavaCodeAudit
+        max_files: 60
+      - repo: lokerxx/JavaVul
+        max_files: 60
+      - repo: proudwind/javasec_study
+        max_files: 20
+      - repo: 7hang/--Java
+        max_files: 15
+      - repo: j3ers3/Hello-Java-Sec
+        max_files: 15
+      # Spring / Spring Boot 漏洞利用与审计
+      - repo: LandGrey/SpringBootVulExploit
+        max_files: 15
+      - repo: JoyChou93/java-sec-code
+        max_files: 15
+      # 代码审计方法论与工具链
+      - repo: webraybtl/CodeQLpy
+        max_files: 20
+  github_docs_codeql:
+    type: github_docs
+    file_delay: 0.15
+    repos:
+      # CodeQL 官方 Java 查询库：每个 query 配一篇 .md，讲漏洞类型与检测思路
+      - repo: github/codeql
+        include_prefixes: ["java/"]
+        suffixes: [".md"]
+        max_files: 500
+  github_docs_semgrep:
+    type: github_docs
+    file_delay: 0.15
+    repos:
+      # Semgrep 官方 Java 规则（yaml 按纯文本入库，保留 rule id 与描述）
+      - repo: semgrep/semgrep-rules
+        include_prefixes: ["java/"]
+        suffixes: [".yaml", ".yml"]
+        max_files: 150
   github_docs_zh:
     type: github_docs
     file_delay: 0.2
