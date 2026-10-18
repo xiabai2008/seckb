@@ -5,11 +5,16 @@ import sqlite3
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from seckb import __version__
+
 STATIC_DIR = Path(__file__).parent / "static"
+VERSION_PLACEHOLDER = "__VERSION__"
 
 
 def load_dashboard_html() -> str:
-    return (STATIC_DIR / "dashboard.html").read_text(encoding="utf-8")
+    """读看板模板并把版本号替换成 __version__，避免两处各写一个版本。"""
+    html = (STATIC_DIR / "dashboard.html").read_text(encoding="utf-8")
+    return html.replace(VERSION_PLACEHOLDER, __version__)
 
 
 def _group(conn: sqlite3.Connection, sql: str) -> list[dict]:

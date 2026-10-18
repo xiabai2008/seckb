@@ -1,7 +1,14 @@
 from pathlib import Path
 
-from seckb.dashboard import build_stats, list_assets
+from seckb import __version__
+from seckb.dashboard import build_stats, list_assets, load_dashboard_html
 from seckb.pipeline.importer import import_file
+
+
+def test_dashboard_html_injects_package_version():
+    html = load_dashboard_html()
+    assert __version__ in html
+    assert "__VERSION__" not in html
 
 
 def make_asset(kb, tmp_path: Path, name: str, title: str, body: str, **kwargs) -> int:
