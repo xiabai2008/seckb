@@ -1,99 +1,185 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="phosphor">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>seckb · 网络安全知识库看板</title>
 <style>
   :root{
-    --bg:#0f1115; --panel:#171a21; --panel-2:#1d222b; --border:#272d39;
-    --fg:#e6e9ef; --muted:#8b93a7; --accent:#4f8cff; --accent-2:#7c5cff;
-    --green:#34d399; --yellow:#fbbf24; --red:#f87171; --radius:10px;
+    --font-ui:"Inter Tight","HarmonyOS Sans SC","Noto Sans SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    --font-mono:"JetBrains Mono","Cascadia Mono","SF Mono",Consolas,monospace;
+    --font-display:var(--font-ui);
+    --radius:10px; --radius-sm:7px; --bar-h:6px;
+  }
+  /* A 玄墨 · Phosphor —— 终端军械库：荧光绿只给数据，琥珀只给告警 */
+  html[data-theme="phosphor"]{
+    --bg:#0b0d0c; --panel:#131715; --panel-2:#1b201d;
+    --border:#262d29; --border-soft:#1d2320;
+    --fg:#e9eeea; --muted:#8a968f; --faint:#5e6b63;
+    --accent:#35d9a3; --accent-2:#35d9a3; --accent-soft:rgba(53,217,163,.16); --accent-ink:#04120c;
+    --warn:#f2b33d; --danger:#f87171; --green:#35d9a3; --yellow:#f2b33d; --red:#f87171;
+    --header-bg:rgba(11,13,12,.93); --dot:rgba(255,255,255,.035);
+    color-scheme:dark;
+  }
+  /* C 纸本 · Archive —— 编辑部档案：米纸、墨线、朱红 */
+  html[data-theme="archive"]{
+    --bg:#f5f2ea; --panel:#fffdf8; --panel-2:#efeae0;
+    --border:#e0d9cb; --border-soft:#eae4d8;
+    --fg:#1b1917; --muted:#6e675c; --faint:#9a9285;
+    --accent:#1e3a5f; --accent-2:#1e3a5f; --accent-soft:rgba(30,58,95,.09); --accent-ink:#fffdf8;
+    --warn:#b23a2e; --danger:#c0392b; --green:#1e3a5f; --yellow:#b23a2e; --red:#c0392b;
+    --header-bg:rgba(245,242,234,.95); --dot:rgba(30,58,95,.05);
+    --font-display:"Source Han Serif CN","Noto Serif SC","Songti SC","SimSun",serif;
+    --radius:2px; --radius-sm:2px; --bar-h:5px;
+    color-scheme:light;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--fg);
-       font-family:"Segoe UI","Microsoft YaHei",system-ui,-apple-system,sans-serif;font-size:14px}
+  body{margin:0;background-color:var(--bg);color:var(--fg);
+       background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:22px 22px;
+       font-family:var(--font-ui);font-size:13.5px;-webkit-font-smoothing:antialiased;transition:background-color .18s,color .18s}
+  html[data-theme="archive"] body{background-image:none}
   a{color:var(--accent)}
-  header{position:sticky;top:0;z-index:20;display:flex;gap:12px;align-items:center;
-         padding:12px 20px;background:rgba(15,17,21,.94);border-bottom:1px solid var(--border);backdrop-filter:blur(6px)}
-  .logo{font-weight:700;font-size:16px;white-space:nowrap}
-  .logo span{color:var(--muted);font-weight:400}
+  header{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;
+         padding:0 24px;height:60px;background:var(--header-bg);border-bottom:1px solid var(--border-soft);
+         backdrop-filter:blur(10px)}
+  .logo{font-family:var(--font-display);font-weight:700;font-size:16px;white-space:nowrap;letter-spacing:.01em}
+  .logo span{color:var(--muted);font-weight:400;font-size:12px}
+  .ver{font-family:var(--font-mono);font-size:9px;color:var(--faint);border:1px solid var(--border);
+       padding:1px 5px;border-radius:var(--radius-sm);margin-left:8px;vertical-align:2px}
   #q{flex:1;min-width:120px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border);
-     background:var(--panel);color:var(--fg);outline:none}
+     background:var(--panel);color:var(--fg);outline:none;font-family:var(--font-ui);font-size:12.5px}
+  #q::placeholder{color:var(--faint)}
   #q:focus{border-color:var(--accent)}
   button{cursor:pointer;border:1px solid var(--border);background:var(--panel);color:var(--fg);
-         padding:8px 14px;border-radius:var(--radius)}
+         padding:8px 14px;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12.5px;transition:.15s}
   button:hover{border-color:var(--accent)}
-  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-  nav button.active{background:var(--panel-2);border-color:var(--accent);color:var(--accent)}
-  main{padding:20px;max-width:1280px;margin:0 auto}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
-  .card .num{font-size:24px;font-weight:700}
-  .card .lbl{color:var(--muted);margin-top:4px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-top:16px}
-  .panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
-  .panel h3{margin:0 0 10px;font-size:14px;color:var(--muted);font-weight:600}
-  .bars{display:flex;flex-direction:column;gap:6px}
-  .bar{display:grid;grid-template-columns:110px 1fr 56px;gap:8px;align-items:center}
-  .bar .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fg)}
-  .bar .track{background:var(--panel-2);border-radius:6px;height:14px;overflow:hidden}
-  .bar .fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:6px}
-  .bar .cnt{text-align:right;color:var(--muted)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+  nav{display:flex;gap:2px;padding:2px;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius)}
+  nav button{border:none;background:transparent;padding:6px 14px;border-radius:calc(var(--radius) - 2px);color:var(--muted)}
+  nav button.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+  .themes{display:flex;gap:2px;padding:2px;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius)}
+  .th{display:flex;align-items:center;padding:5px 12px;border:none;background:transparent;
+      border-radius:calc(var(--radius) - 2px);color:var(--muted);font-size:11.5px;line-height:1.4;transition:.15s}
+  .th:hover{color:var(--fg)}
+  .th.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+  main{padding:24px;max-width:1300px;margin:0 auto}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px}
+  @media(min-width:920px){.cards{grid-template-columns:2.2fr repeat(6,1fr)}}
+  .card{display:flex;flex-direction:column-reverse;justify-content:space-between;min-height:100px;
+        background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+  .card:first-child{background:radial-gradient(130% 130% at 0% 0%,var(--accent-soft),transparent 62%),var(--panel)}
+  html[data-theme="archive"] .card:first-child{background:var(--panel)}
+  .card .num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;letter-spacing:-.02em}
+  .card:first-child .num{font-size:32px}
+  .card.kev .num{color:var(--warn)}
+  .card .lbl{color:var(--muted);font-size:10.5px;line-height:1.35}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}
+  .panel.c2{grid-column:span 2}
+  .panel.c4{grid-column:span 4}
+  @media(max-width:1100px){
+    .grid{grid-template-columns:repeat(2,1fr)}
+    .panel.c2,.panel.c4{grid-column:span 2}
+  }
+  @media(max-width:680px){
+    .grid{grid-template-columns:1fr}
+    .panel.c2,.panel.c4{grid-column:span 1}
+  }
+  .panel{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+  .note{margin-top:auto;padding-top:10px;font-size:11px;color:var(--faint);line-height:1.5}
+  .divider{height:1px;background:var(--border);margin:14px 0 12px}
+  .panel h3{margin:0 0 12px;font-size:12px;color:var(--fg);font-weight:600;letter-spacing:.02em;
+            font-family:var(--font-display);display:flex;justify-content:space-between;align-items:baseline}
+  .panel h3 em{font-style:normal;font-family:var(--font-mono);font-size:9px;color:var(--faint);letter-spacing:.06em}
+  .bars{display:flex;flex-direction:column;gap:9px}
+  .bar{display:grid;grid-template-columns:98px 1fr 52px;gap:10px;align-items:center}
+  .bar .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:11.5px}
+  .bar .track{background:var(--panel-2);border-radius:99px;height:var(--bar-h);overflow:hidden}
+  .bar .fill{height:100%;background:var(--accent);border-radius:99px}
+  .bar .cnt{text-align:right;color:var(--muted);font-family:var(--font-mono);font-size:10.5px;font-variant-numeric:tabular-nums}
   table{width:100%;border-collapse:collapse}
-  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
-  th{color:var(--muted);font-weight:600;font-size:12px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border-soft);vertical-align:middle}
+  th{color:var(--faint);font-weight:500;font-size:10.5px}
+  td{font-size:12.5px}
   tr.row{cursor:pointer}
   tr.row:hover{background:var(--panel-2)}
-  .badge{display:inline-block;padding:1px 8px;border-radius:20px;background:var(--panel-2);
-         border:1px solid var(--border);color:var(--muted);font-size:12px;margin:0 4px 2px 0}
-  .badge.type{color:var(--accent);border-color:var(--accent)}
-  .badge.kev{color:var(--red);border-color:var(--red)}
-  .badge.matched{color:var(--green);border-color:var(--green)}
+  .badge{display:inline-block;padding:1px 8px;border-radius:99px;background:var(--panel-2);
+         border:1px solid var(--border);color:var(--muted);font-size:10.5px;margin:0 4px 2px 0}
+  .badge.type{color:var(--accent);border-color:transparent;background:var(--accent-soft);font-family:var(--font-mono)}
+  .badge.kev{color:var(--warn);border-color:var(--warn)}
+  .badge.matched{color:var(--accent);border-color:transparent;background:var(--accent-soft)}
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-  select,input.f{padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border);
-                 background:var(--panel);color:var(--fg)}
+  select,input.f{padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);
+                 background:var(--panel);color:var(--fg);font-family:var(--font-ui);font-size:12.5px}
   .muted{color:var(--muted)}
   #drawer{position:fixed;top:0;right:0;height:100%;width:min(640px,92vw);background:var(--panel);
           border-left:1px solid var(--border);padding:18px;overflow-y:auto;z-index:30;
-          box-shadow:-20px 0 40px rgba(0,0,0,.45)}
-  #drawer h2{margin:4px 0 8px;font-size:18px}
+          box-shadow:-20px 0 40px rgba(0,0,0,.35)}
+  #drawer h2{margin:4px 0 8px;font-size:18px;font-family:var(--font-display)}
   #drawer pre{white-space:pre-wrap;word-break:break-word;background:var(--panel-2);border:1px solid var(--border);
-              border-radius:8px;padding:10px;max-height:420px;overflow:auto;font-size:12.5px}
+              border-radius:var(--radius-sm);padding:10px;max-height:420px;overflow:auto;font-size:12px;
+              font-family:var(--font-mono)}
   .close{position:absolute;top:12px;right:14px}
-  .snippet{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px}
-  .snippet code{font-size:12.5px;white-space:pre-wrap;word-break:break-word}
-  .stat-line{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);margin-top:8px}
-  .empty{padding:24px;text-align:center;color:var(--muted)}
+  .snippet{background:var(--panel-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:8px}
+  .snippet code{font-size:12px;white-space:pre-wrap;word-break:break-word;font-family:var(--font-mono)}
+  .stat-line{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);margin-top:auto;padding-top:10px;font-size:11.5px}
+  .empty{padding:24px;text-align:center;color:var(--faint)}
   .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px}
-  svg text{fill:var(--muted);font-size:10px}
+  svg text{fill:var(--faint);font-size:9.5px;font-family:var(--font-mono)}
+  .svcbar{display:flex;gap:10px;align-items:center;padding:8px 24px;flex-wrap:wrap;
+          background:var(--panel);border-bottom:1px solid var(--border-soft);
+          position:sticky;top:60px;z-index:19}
+  .svc{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted)}
+  .svc .dot{width:7px;height:7px;border-radius:99px;background:var(--faint);display:inline-block}
+  .svc.on{color:var(--fg)}
+  .svc.on .dot{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+  .svc.off .dot{background:var(--danger)}
+  .svcbar button{padding:5px 10px;font-size:11.5px}
+  .svcbar .msg{font-size:11px;color:var(--faint);margin-left:auto}
 </style>
 </head>
 <body>
 <header>
-  <div class="logo">seckb <span>· 网络安全知识库</span></div>
+  <div class="logo">seckb <span>· 网络安全知识库</span><em class="ver">v1.3</em></div>
   <input id="q" placeholder="搜索：fastjson 反序列化 / 永恒之蓝 / sudo 提权 / GTFOBins …">
   <button class="primary" id="btnSearch">搜索</button>
   <nav>
     <button data-tab="overview" class="active">概览</button>
     <button data-tab="browse">浏览</button>
   </nav>
+  <div class="themes" role="group" aria-label="切换主题">
+    <button class="th" data-theme="phosphor" title="玄墨 · 暗色">玄墨</button>
+    <button class="th" data-theme="archive" title="纸本 · 亮色">纸本</button>
+  </div>
 </header>
+
+<div class="svcbar">
+  <span class="svc" id="svcOllama" title="本地向量化 bge-m3（语义检索依赖）"><i class="dot"></i>Ollama</span>
+  <span class="svc" id="svcMeili" title="关键词索引（Meilisearch）"><i class="dot"></i>Meilisearch</span>
+  <span class="svc" id="svcDaemon" title="自动采集 / 富化 / 向量 / 索引"><i class="dot"></i>自动采集</span>
+  <button class="primary" id="btnStartAll">一键启动全部</button>
+  <button id="btnStartSearch">启动检索后端</button>
+  <button id="btnStartCollect">启动自动采集</button>
+  <button id="btnStopAll">全部停止</button>
+  <span class="msg" id="svcMsg"></span>
+</div>
 
 <main>
   <section id="view-overview">
     <div class="cards" id="statCards"></div>
     <div class="grid">
-      <div class="panel"><h3>类型分布</h3><div class="bars" id="chartType"></div></div>
-      <div class="panel"><h3>来源分布</h3><div class="bars" id="chartSource"></div></div>
-      <div class="panel"><h3>语言分布</h3><div class="bars" id="chartLang"></div></div>
-      <div class="panel"><h3>方向分类 Top 12</h3><div class="bars" id="chartCategory"></div></div>
-      <div class="panel"><h3>常用工具（实体 Top 12）</h3><div class="bars" id="chartTools"></div></div>
-      <div class="panel"><h3>近 30 天入库</h3><div id="chartGrowth"></div>
+      <div class="panel c2"><h3>类型与语言 <em>SHARE</em></h3>
+        <div class="bars" id="chartType"></div>
+        <div class="divider"></div>
+        <div class="bars" id="chartLang"></div>
+        <div class="note">CVE 为主体；英文语料为主，中文是主要补充方向</div></div>
+      <div class="panel c2"><h3>来源分布 <em>SOURCE · SQRT</em></h3><div class="bars" id="chartSource"></div></div>
+      <div class="panel c2"><h3>方向分类 Top 12 <em>CATEGORY</em></h3><div class="bars" id="chartCategory"></div></div>
+      <div class="panel c2"><h3>常用工具（实体 Top 12） <em>ENTITY</em></h3><div class="bars" id="chartTools"></div></div>
+      <div class="panel c4"><h3>近 30 天累计入库 <em>CUMULATIVE</em></h3><div id="chartGrowth"></div>
         <div class="stat-line" id="cveLine"></div></div>
     </div>
     <div class="grid">
-      <div class="panel" style="grid-column:1/-1"><h3>最近入库</h3>
+      <div class="panel" style="grid-column:1/-1"><h3>最近入库 <em>LATEST 20</em></h3>
         <table><tbody id="recentRows"></tbody></table>
       </div>
     </div>
@@ -143,6 +229,20 @@ const fmt = (n) => Number(n ?? 0).toLocaleString("zh-CN");
 
 let browsePage = 1;
 
+/* ---- 主题切换：三套色板，localStorage 记住选择 ---- */
+const THEME_KEY = "seckb-theme";
+function applyTheme(name){
+  document.documentElement.dataset.theme = name;
+  document.querySelectorAll(".th").forEach(b => b.classList.toggle("active", b.dataset.theme === name));
+}
+function setTheme(name){
+  applyTheme(name);
+  try { localStorage.setItem(THEME_KEY, name); } catch (e) {}
+}
+document.querySelectorAll(".th").forEach(b => b.onclick = () => setTheme(b.dataset.theme));
+const urlTheme = new URLSearchParams(location.search).get("theme");
+applyTheme(urlTheme || (() => { try { return localStorage.getItem(THEME_KEY) || "phosphor"; } catch (e) { return "phosphor"; } })());
+
 function switchTab(name){
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
   $("view-overview").hidden = name !== "overview";
@@ -151,13 +251,14 @@ function switchTab(name){
   if (name === "browse") loadBrowse(1);
 }
 
-function bars(container, items, limit = 12){
+function bars(container, items, limit = 12, sqrt = false){
   const top = items.slice(0, limit);
   const max = Math.max(1, ...top.map(i => i.count));
+  const scale = (v) => sqrt ? Math.sqrt(v / max) : v / max;
   container.innerHTML = top.map(i => `
     <div class="bar">
       <div class="name" title="${esc(i.name)}">${esc(i.name)}</div>
-      <div class="track"><div class="fill" style="width:${Math.round(i.count / max * 100)}%"></div></div>
+      <div class="track"><div class="fill" style="width:${Math.max(1.5, scale(i.count) * 100).toFixed(1)}%"></div></div>
       <div class="cnt">${fmt(i.count)}</div>
     </div>`).join("");
 }
@@ -165,16 +266,31 @@ function bars(container, items, limit = 12){
 function growthChart(items){
   const box = $("chartGrowth");
   if (!items.length){ box.innerHTML = '<div class="empty">暂无数据</div>'; return; }
-  const w = 560, h = 120, pad = 18;
-  const max = Math.max(...items.map(i => i.count), 1);
-  const step = items.length > 1 ? (w - pad * 2) / (items.length - 1) : 0;
-  const pts = items.map((i, idx) => `${pad + idx * step},${h - pad - (i.count / max) * (h - pad * 2)}`).join(" ");
+  const w = Math.max(360, Math.round(box.clientWidth || 720)), h = 150, pad = 26;
+  let acc = 0;
+  const pts = items.map(i => ({ d: i.date, v: (acc += i.count) }));
+  const max = Math.max(...pts.map(p => p.v), 1);
+  const t0 = new Date(pts[0].d).getTime();
+  const t1 = new Date(pts[pts.length - 1].d).getTime() || t0 + 864e5;
+  const xOf = (d) => pad + ((new Date(d).getTime() - t0) / (t1 - t0 || 1)) * (w - pad * 2);
+  const yOf = (v) => h - pad - (v / max) * (h - pad * 2);
+  const line = pts.map(p => `${xOf(p.d).toFixed(1)},${yOf(p.v).toFixed(1)}`).join(" ");
+  const last = pts[pts.length - 1];
   box.innerHTML = `
-    <svg viewBox="0 0 ${w} ${h}" width="100%" height="120">
-      <polyline points="${pts}" fill="none" stroke="#4f8cff" stroke-width="2"/>
-      ${items.map((i, idx) => idx % Math.ceil(items.length / 6) === 0
-        ? `<text x="${pad + idx * step}" y="${h - 4}" text-anchor="middle">${esc(i.date.slice(5))}</text>` : "").join("")}
-      <text x="${pad}" y="12">峰值 ${fmt(max)}</text>
+    <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
+      <defs>
+        <linearGradient id="gArea" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" style="stop-color:var(--accent);stop-opacity:.24"/>
+          <stop offset="1" style="stop-color:var(--accent);stop-opacity:0"/>
+        </linearGradient>
+      </defs>
+      <line x1="${pad}" y1="${pad}" x2="${w - pad}" y2="${pad}" style="stroke:var(--border-soft)"/>
+      <line x1="${pad}" y1="${(h / 2).toFixed(1)}" x2="${w - pad}" y2="${(h / 2).toFixed(1)}" style="stroke:var(--border-soft)"/>
+      <polygon points="${line} ${(w - pad).toFixed(1)},${h - pad} ${pad},${h - pad}" fill="url(#gArea)"/>
+      <polyline points="${line}" fill="none" style="stroke:var(--accent)" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="${xOf(last.d).toFixed(1)}" cy="${yOf(last.v).toFixed(1)}" r="2.6" style="fill:var(--accent)"/>
+      <text x="${pad}" y="${h - 8}">${esc(pts[0].d.slice(5))}</text>
+      <text x="${w - pad}" y="${h - 8}" text-anchor="end">${esc(last.d.slice(5))}</text>
     </svg>`;
 }
 
@@ -182,22 +298,29 @@ async function loadStats(){
   const res = await fetch("/stats");
   const s = await res.json();
   const t = s.totals;
-  $("statCards").innerHTML = [
+  const cards = [
     ["资产总量", t.assets], ["正文切片", t.chunks], ["知识卡片", t.cards],
-    ["命令/载荷片段", t.snippets], ["实体", t.entities],
-    ["CVE（含 CVSS）", `${fmt(s.cves.total)}（${fmt(s.cves.with_cvss)}）`],
+    ["命令 / 载荷片段", t.snippets], ["实体", t.entities],
+    ["CVE · 含 CVSS " + fmt(s.cves.with_cvss), s.cves.total],
     ["KEV 在野利用", s.cves.in_kev],
-  ].map(([lbl, num]) => `<div class="card"><div class="num">${fmt(num)}</div><div class="lbl">${lbl}</div></div>`).join("");
+  ];
+  $("statCards").innerHTML = cards.map(([lbl, num]) =>
+    `<div class="card${lbl.indexOf("KEV") === 0 ? " kev" : ""}"><div class="num">${fmt(num)}</div><div class="lbl">${esc(lbl)}</div></div>`
+  ).join("");
   bars($("chartType"), s.by_type);
-  bars($("chartSource"), s.by_source, 14);
+  bars($("chartSource"), s.by_source, 8, true);
   bars($("chartLang"), s.by_lang);
   bars($("chartCategory"), s.by_category);
   bars($("chartTools"), s.top_tools);
   growthChart(s.growth);
-  $("cveLine").innerHTML = `<span>近 30 天共入库 ${fmt(s.growth.reduce((a, b) => a + b.count, 0))} 条</span>`;
-  $("recentRows").innerHTML = s.recent.map(r => `
+  const sum30 = s.growth.reduce((a, b) => a + b.count, 0);
+  const peak = s.growth.reduce((a, b) => (b.count > a.count ? b : a), { count: 0, date: "" });
+  $("cveLine").innerHTML =
+    `<span>近 30 天累计入库 ${fmt(sum30)} 条</span>` +
+    `<span>单日峰值 ${fmt(peak.count)}（${esc((peak.date || "").slice(5))}）</span>`;
+  $("recentRows").innerHTML = s.recent.slice(0, 8).map(r => `
     <tr class="row" onclick="openDetail(${r.id})">
-      <td style="width:70px">${r.id}</td><td>${esc(r.title)}</td>
+      <td style="width:70px" class="muted">${r.id}</td><td>${esc(r.title)}</td>
       <td style="width:90px"><span class="badge type">${esc(r.type)}</span></td>
       <td style="width:110px" class="muted">${esc(r.source)}</td>
       <td style="width:170px" class="muted">${esc((r.imported_at || "").slice(0, 16).replace("T", " "))}</td>
@@ -245,7 +368,8 @@ async function doSearch(){
   $("searchResults").innerHTML = '<div class="empty">检索中…</div>';
   const data = await (await fetch("/search?" + new URLSearchParams({q, limit: 10}))).json();
   const degraded = data.degraded && data.degraded.length
-    ? `<span class="badge" style="color:var(--yellow);border-color:var(--yellow)">降级检索：${esc(data.degraded.join(", "))}</span>` : "";
+    ? `<span class="badge" style="color:var(--yellow);border-color:var(--yellow)">降级检索：${esc(data.degraded.join(", "))}</span>
+       <button onclick="startServices('search').then(() => doSearch())">启动检索后端并重试</button>` : "";
   const head = `<div class="toolbar">命中 ${data.results.length} 条 · 约 ${fmt(data.token_estimate)} tokens ${degraded}</div>`;
   const rows = data.results.map(r => `
     <div class="snippet">
@@ -304,6 +428,55 @@ $("prevPage").onclick = () => { if (browsePage > 1) loadBrowse(browsePage - 1); 
 $("nextPage").onclick = () => loadBrowse(browsePage + 1);
 $("btnCloseDrawer").onclick = () => { $("drawer").hidden = true; };
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+
+/* ---- 服务控制：检索后端（Ollama/Meilisearch）与自动采集（daemon） ---- */
+function svcDot(id, running){
+  const el = $(id);
+  el.classList.toggle("on", !!running);
+  el.classList.toggle("off", !running);
+}
+async function loadServices(){
+  try {
+    const s = await (await fetch("/services/status")).json();
+    svcDot("svcOllama", s.ollama && s.ollama.running);
+    svcDot("svcMeili", s.meilisearch && s.meilisearch.running);
+    svcDot("svcDaemon", s.daemon && s.daemon.running);
+  } catch (e) { /* 看板服务自身异常时忽略 */ }
+}
+async function svcAction(target, what){
+  const msg = $("svcMsg");
+  msg.textContent = "执行中…";
+  try {
+    const res = await fetch(`/services/${target}?what=${what}`, {method: "POST"});
+    const data = await res.json();
+    if (!res.ok){ msg.textContent = data.detail || "执行失败"; return null; }
+    const s = data.status || {};
+    svcDot("svcOllama", s.ollama && s.ollama.running);
+    svcDot("svcMeili", s.meilisearch && s.meilisearch.running);
+    svcDot("svcDaemon", s.daemon && s.daemon.running);
+    const failed = (data.actions || []).filter(a => a.action === "failed");
+    msg.textContent = failed.length
+      ? `部分失败：${failed.map(a => `${a.target}(${a.detail || "?"})`).join("；")}`
+      : (target === "start" ? "已启动" : "已停止");
+    return data;
+  } catch (e) {
+    msg.textContent = "请求失败：" + e;
+    return null;
+  }
+}
+async function startServices(what){
+  const data = await svcAction("start", what);
+  if (data && data.status && data.status.retrieval_ready){
+    $("svcMsg").textContent = "检索后端已就绪";
+  }
+  return data;
+}
+$("btnStartAll").onclick = () => startServices("all");
+$("btnStartSearch").onclick = () => startServices("search");
+$("btnStartCollect").onclick = () => startServices("collect");
+$("btnStopAll").onclick = () => svcAction("stop", "all");
+loadServices();
+setInterval(loadServices, 15000);
 
 loadStats();
 </script>

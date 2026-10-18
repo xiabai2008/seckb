@@ -10,12 +10,17 @@ from seckb import tools as kb_tools
 from seckb.config import Settings
 from seckb.dashboard import build_stats, list_assets, load_dashboard_html
 from seckb.retrieval import HybridRetriever
+from seckb.services import ServiceManager
 
 
 def create_app(
-    conn: sqlite3.Connection, settings: Settings, retriever: HybridRetriever
+    conn: sqlite3.Connection,
+    settings: Settings,
+    retriever: HybridRetriever,
+    services: ServiceManager | None = None,
 ) -> FastAPI:
     app = FastAPI(title="seckb", version=__version__)
+    manager = services or ServiceManager(settings)
 
     @app.get("/", response_class=HTMLResponse)
     def dashboard() -> str:
@@ -49,6 +54,24 @@ def create_app(
     @app.get("/health")
     def health() -> dict:
         return {"status": "ok", "version": __version__}
+
+    @app.get("/services/status")
+    def services_status() -> dict:
+        return manager.status()
+
+    @app.post("/services/start")
+    def services_start(what: str = "all") -> dict:
+        try:
+            return manager.start(what)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/services/stop")
+    def services_stop(what: str = "all") -> dict:
+        try:
+            return manager.stop(what)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/search")
     def search(

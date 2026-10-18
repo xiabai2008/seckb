@@ -80,3 +80,38 @@ def test_api_snippets_filter_by_asset(kb, tmp_path: Path):
     assert response.status_code == 200
     assert response.json()["count"] >= 1
     assert client.get("/snippets", params={"asset_id": 99999}).json()["count"] == 0
+
+
+class FakeServiceManager:
+    def __init__(self):
+        self.calls = []
+
+    def status(self):
+        return {"ollama": {"running": True}, "retrieval_ready": True}
+
+    def start(self, what):
+        self.calls.append(("start", what))
+        if what not in ("search", "collect", "all"):
+            raise ValueError("未知目标")
+        return {"what": what, "actions": [], "status": self.status()}
+
+    def stop(self, what):
+        self.calls.append(("stop", what))
+        if what not in ("search", "collect", "all"):
+            raise ValueError("未知目标")
+        return {"what": what, "actions": [], "status": self.status()}
+
+
+def test_api_services_control(kb, tmp_path: Path):
+    from seckb.api import create_app
+    from seckb.retrieval import HybridRetriever
+
+    fake = FakeServiceManager()
+    retriever = HybridRetriever(kb.conn, kb.settings)
+    client = TestClient(create_app(kb.conn, kb.settings, retriever, services=fake))
+
+    assert client.get("/services/status").json()["retrieval_ready"] is True
+    assert client.post("/services/start", params={"what": "search"}).status_code == 200
+    assert client.post("/services/stop", params={"what": "all"}).status_code == 200
+    assert client.post("/services/start", params={"what": "bogus"}).status_code == 400
+    assert fake.calls == [("start", "search"), ("stop", "all"), ("start", "bogus")]
