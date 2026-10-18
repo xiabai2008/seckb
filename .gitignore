@@ -8,4 +8,5 @@ build/
 dist/
 config/settings.local.yaml
 .workbuddy/
+.mimosa/
 debug.log
