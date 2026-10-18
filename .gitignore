@@ -7,3 +7,5 @@ __pycache__/
 build/
 dist/
 config/settings.local.yaml
+.workbuddy/
+debug.log
