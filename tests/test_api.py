@@ -54,3 +54,29 @@ def test_api_get_and_snippets(kb, tmp_path: Path):
     response = client.get("/snippets", params={"kind": "oneliner"})
     assert response.status_code == 200
     assert response.json()["count"] >= 1
+
+
+def test_api_dashboard_page(kb, tmp_path: Path):
+    client, _ = make_client(kb, tmp_path)
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "seckb" in response.text
+    assert "知识库" in response.text
+
+
+def test_api_stats_and_assets(kb, tmp_path: Path):
+    client, asset_id = make_client(kb, tmp_path)
+    stats = client.get("/stats").json()
+    assert stats["totals"]["assets"] == 1
+    assert stats["totals"]["cards"] == 1
+    assets = client.get("/assets", params={"type": "post"}).json()
+    assert assets["total"] == 1
+    assert assets["items"][0]["id"] == asset_id
+
+
+def test_api_snippets_filter_by_asset(kb, tmp_path: Path):
+    client, asset_id = make_client(kb, tmp_path)
+    response = client.get("/snippets", params={"asset_id": asset_id})
+    assert response.status_code == 200
+    assert response.json()["count"] >= 1
+    assert client.get("/snippets", params={"asset_id": 99999}).json()["count"] == 0

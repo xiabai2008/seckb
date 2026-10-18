@@ -3,10 +3,12 @@ from __future__ import annotations
 import sqlite3
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 
 from seckb import __version__
 from seckb import tools as kb_tools
 from seckb.config import Settings
+from seckb.dashboard import build_stats, list_assets, load_dashboard_html
 from seckb.retrieval import HybridRetriever
 
 
@@ -14,6 +16,35 @@ def create_app(
     conn: sqlite3.Connection, settings: Settings, retriever: HybridRetriever
 ) -> FastAPI:
     app = FastAPI(title="seckb", version=__version__)
+
+    @app.get("/", response_class=HTMLResponse)
+    def dashboard() -> str:
+        return load_dashboard_html()
+
+    @app.get("/stats")
+    def stats() -> dict:
+        return build_stats(conn)
+
+    @app.get("/assets")
+    def assets(
+        q: str | None = None,
+        type: str | None = None,
+        source: str | None = None,
+        category: str | None = None,
+        lang: str | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> dict:
+        return list_assets(
+            conn,
+            q=q,
+            asset_type=type,
+            source=source,
+            category=category,
+            lang=lang,
+            page=page,
+            page_size=page_size,
+        )
 
     @app.get("/health")
     def health() -> dict:
@@ -41,8 +72,14 @@ def create_app(
 
     @app.get("/snippets")
     def snippets(
-        q: str | None = None, tool: str | None = None, kind: str | None = None, limit: int = 10
+        q: str | None = None,
+        tool: str | None = None,
+        kind: str | None = None,
+        asset_id: int | None = None,
+        limit: int = 10,
     ) -> dict:
-        return kb_tools.kb_snippets(conn, query=q, tool=tool, kind=kind, limit=limit)
+        return kb_tools.kb_snippets(
+            conn, query=q, tool=tool, kind=kind, asset_id=asset_id, limit=limit
+        )
 
     return app

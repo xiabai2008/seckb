@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>seckb · 网络安全知识库看板</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel-2:#1d222b; --border:#272d39;
+    --fg:#e6e9ef; --muted:#8b93a7; --accent:#4f8cff; --accent-2:#7c5cff;
+    --green:#34d399; --yellow:#fbbf24; --red:#f87171; --radius:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font-family:"Segoe UI","Microsoft YaHei",system-ui,-apple-system,sans-serif;font-size:14px}
+  a{color:var(--accent)}
+  header{position:sticky;top:0;z-index:20;display:flex;gap:12px;align-items:center;
+         padding:12px 20px;background:rgba(15,17,21,.94);border-bottom:1px solid var(--border);backdrop-filter:blur(6px)}
+  .logo{font-weight:700;font-size:16px;white-space:nowrap}
+  .logo span{color:var(--muted);font-weight:400}
+  #q{flex:1;min-width:120px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border);
+     background:var(--panel);color:var(--fg);outline:none}
+  #q:focus{border-color:var(--accent)}
+  button{cursor:pointer;border:1px solid var(--border);background:var(--panel);color:var(--fg);
+         padding:8px 14px;border-radius:var(--radius)}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  nav button.active{background:var(--panel-2);border-color:var(--accent);color:var(--accent)}
+  main{padding:20px;max-width:1280px;margin:0 auto}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+  .card .num{font-size:24px;font-weight:700}
+  .card .lbl{color:var(--muted);margin-top:4px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-top:16px}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+  .panel h3{margin:0 0 10px;font-size:14px;color:var(--muted);font-weight:600}
+  .bars{display:flex;flex-direction:column;gap:6px}
+  .bar{display:grid;grid-template-columns:110px 1fr 56px;gap:8px;align-items:center}
+  .bar .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fg)}
+  .bar .track{background:var(--panel-2);border-radius:6px;height:14px;overflow:hidden}
+  .bar .fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:6px}
+  .bar .cnt{text-align:right;color:var(--muted)}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  tr.row{cursor:pointer}
+  tr.row:hover{background:var(--panel-2)}
+  .badge{display:inline-block;padding:1px 8px;border-radius:20px;background:var(--panel-2);
+         border:1px solid var(--border);color:var(--muted);font-size:12px;margin:0 4px 2px 0}
+  .badge.type{color:var(--accent);border-color:var(--accent)}
+  .badge.kev{color:var(--red);border-color:var(--red)}
+  .badge.matched{color:var(--green);border-color:var(--green)}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  select,input.f{padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border);
+                 background:var(--panel);color:var(--fg)}
+  .muted{color:var(--muted)}
+  #drawer{position:fixed;top:0;right:0;height:100%;width:min(640px,92vw);background:var(--panel);
+          border-left:1px solid var(--border);padding:18px;overflow-y:auto;z-index:30;
+          box-shadow:-20px 0 40px rgba(0,0,0,.45)}
+  #drawer h2{margin:4px 0 8px;font-size:18px}
+  #drawer pre{white-space:pre-wrap;word-break:break-word;background:var(--panel-2);border:1px solid var(--border);
+              border-radius:8px;padding:10px;max-height:420px;overflow:auto;font-size:12.5px}
+  .close{position:absolute;top:12px;right:14px}
+  .snippet{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+  .snippet code{font-size:12.5px;white-space:pre-wrap;word-break:break-word}
+  .stat-line{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);margin-top:8px}
+  .empty{padding:24px;text-align:center;color:var(--muted)}
+  .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px}
+  svg text{fill:var(--muted);font-size:10px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">seckb <span>· 网络安全知识库</span></div>
+  <input id="q" placeholder="搜索：fastjson 反序列化 / 永恒之蓝 / sudo 提权 / GTFOBins …">
+  <button class="primary" id="btnSearch">搜索</button>
+  <nav>
+    <button data-tab="overview" class="active">概览</button>
+    <button data-tab="browse">浏览</button>
+  </nav>
+</header>
+
+<main>
+  <section id="view-overview">
+    <div class="cards" id="statCards"></div>
+    <div class="grid">
+      <div class="panel"><h3>类型分布</h3><div class="bars" id="chartType"></div></div>
+      <div class="panel"><h3>来源分布</h3><div class="bars" id="chartSource"></div></div>
+      <div class="panel"><h3>语言分布</h3><div class="bars" id="chartLang"></div></div>
+      <div class="panel"><h3>方向分类 Top 12</h3><div class="bars" id="chartCategory"></div></div>
+      <div class="panel"><h3>常用工具（实体 Top 12）</h3><div class="bars" id="chartTools"></div></div>
+      <div class="panel"><h3>近 30 天入库</h3><div id="chartGrowth"></div>
+        <div class="stat-line" id="cveLine"></div></div>
+    </div>
+    <div class="grid">
+      <div class="panel" style="grid-column:1/-1"><h3>最近入库</h3>
+        <table><tbody id="recentRows"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-browse" hidden>
+    <div class="toolbar">
+      <input class="f" id="fq" placeholder="标题关键词">
+      <select id="ftype"><option value="">全部类型</option></select>
+      <select id="fsource"><option value="">全部来源</option></select>
+      <select id="fcategory"><option value="">全部分类</option></select>
+      <select id="flang"><option value="">全部语言</option></select>
+      <button id="btnFilter">筛选</button>
+      <span class="muted" id="browseCount"></span>
+    </div>
+    <div class="panel">
+      <table>
+        <thead><tr><th style="width:70px">ID</th><th>标题</th><th style="width:90px">类型</th>
+          <th style="width:110px">来源</th><th style="width:110px">分类</th><th style="width:70px">语言</th></tr></thead>
+        <tbody id="assetRows"></tbody>
+      </table>
+      <div class="pager">
+        <button id="prevPage">上一页</button>
+        <span class="muted" id="pageInfo"></span>
+        <button id="nextPage">下一页</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-search" hidden>
+    <div class="panel">
+      <h3 id="searchTitle">搜索结果</h3>
+      <div id="searchResults"></div>
+    </div>
+  </section>
+</main>
+
+<aside id="drawer" hidden>
+  <button class="close" id="btnCloseDrawer">关闭</button>
+  <div id="drawerBody"></div>
+</aside>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = (n) => Number(n ?? 0).toLocaleString("zh-CN");
+
+let browsePage = 1;
+
+function switchTab(name){
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+  $("view-overview").hidden = name !== "overview";
+  $("view-browse").hidden = name !== "browse";
+  $("view-search").hidden = name !== "search";
+  if (name === "browse") loadBrowse(1);
+}
+
+function bars(container, items, limit = 12){
+  const top = items.slice(0, limit);
+  const max = Math.max(1, ...top.map(i => i.count));
+  container.innerHTML = top.map(i => `
+    <div class="bar">
+      <div class="name" title="${esc(i.name)}">${esc(i.name)}</div>
+      <div class="track"><div class="fill" style="width:${Math.round(i.count / max * 100)}%"></div></div>
+      <div class="cnt">${fmt(i.count)}</div>
+    </div>`).join("");
+}
+
+function growthChart(items){
+  const box = $("chartGrowth");
+  if (!items.length){ box.innerHTML = '<div class="empty">暂无数据</div>'; return; }
+  const w = 560, h = 120, pad = 18;
+  const max = Math.max(...items.map(i => i.count), 1);
+  const step = items.length > 1 ? (w - pad * 2) / (items.length - 1) : 0;
+  const pts = items.map((i, idx) => `${pad + idx * step},${h - pad - (i.count / max) * (h - pad * 2)}`).join(" ");
+  box.innerHTML = `
+    <svg viewBox="0 0 ${w} ${h}" width="100%" height="120">
+      <polyline points="${pts}" fill="none" stroke="#4f8cff" stroke-width="2"/>
+      ${items.map((i, idx) => idx % Math.ceil(items.length / 6) === 0
+        ? `<text x="${pad + idx * step}" y="${h - 4}" text-anchor="middle">${esc(i.date.slice(5))}</text>` : "").join("")}
+      <text x="${pad}" y="12">峰值 ${fmt(max)}</text>
+    </svg>`;
+}
+
+async function loadStats(){
+  const res = await fetch("/stats");
+  const s = await res.json();
+  const t = s.totals;
+  $("statCards").innerHTML = [
+    ["资产总量", t.assets], ["正文切片", t.chunks], ["知识卡片", t.cards],
+    ["命令/载荷片段", t.snippets], ["实体", t.entities],
+    ["CVE（含 CVSS）", `${fmt(s.cves.total)}（${fmt(s.cves.with_cvss)}）`],
+    ["KEV 在野利用", s.cves.in_kev],
+  ].map(([lbl, num]) => `<div class="card"><div class="num">${fmt(num)}</div><div class="lbl">${lbl}</div></div>`).join("");
+  bars($("chartType"), s.by_type);
+  bars($("chartSource"), s.by_source, 14);
+  bars($("chartLang"), s.by_lang);
+  bars($("chartCategory"), s.by_category);
+  bars($("chartTools"), s.top_tools);
+  growthChart(s.growth);
+  $("cveLine").innerHTML = `<span>近 30 天共入库 ${fmt(s.growth.reduce((a, b) => a + b.count, 0))} 条</span>`;
+  $("recentRows").innerHTML = s.recent.map(r => `
+    <tr class="row" onclick="openDetail(${r.id})">
+      <td style="width:70px">${r.id}</td><td>${esc(r.title)}</td>
+      <td style="width:90px"><span class="badge type">${esc(r.type)}</span></td>
+      <td style="width:110px" class="muted">${esc(r.source)}</td>
+      <td style="width:170px" class="muted">${esc((r.imported_at || "").slice(0, 16).replace("T", " "))}</td>
+    </tr>`).join("");
+
+  fillSelect($("ftype"), s.by_type);
+  fillSelect($("fsource"), s.by_source);
+  fillSelect($("fcategory"), s.by_category);
+  fillSelect($("flang"), s.by_lang);
+}
+
+function fillSelect(select, items){
+  const current = select.value;
+  select.innerHTML = `<option value="">${select.querySelector("option").textContent}</option>` +
+    items.map(i => `<option value="${esc(i.name)}">${esc(i.name)}（${fmt(i.count)}）</option>`).join("");
+  select.value = current;
+}
+
+async function loadBrowse(page){
+  browsePage = page;
+  const params = new URLSearchParams({page, page_size: 50});
+  const map = {q: "fq", type: "ftype", source: "fsource", category: "fcategory", lang: "flang"};
+  for (const [key, id] of Object.entries(map)){
+    const v = $(id).value.trim();
+    if (v) params.set(key, v);
+  }
+  const data = await (await fetch("/assets?" + params)).json();
+  $("browseCount").textContent = `共 ${fmt(data.total)} 条`;
+  $("pageInfo").textContent = `第 ${data.page} / ${Math.max(1, Math.ceil(data.total / data.page_size))} 页`;
+  $("assetRows").innerHTML = data.items.map(a => `
+    <tr class="row" onclick="openDetail(${a.id})">
+      <td>${a.id}</td><td>${esc(a.title)}</td>
+      <td><span class="badge type">${esc(a.type)}</span></td>
+      <td class="muted">${esc(a.source)}</td>
+      <td class="muted">${esc(a.category || "-")}</td>
+      <td class="muted">${esc(a.lang)}</td>
+    </tr>`).join("") || '<tr><td colspan="6" class="empty">没有匹配的资产</td></tr>';
+}
+
+async function doSearch(){
+  const q = $("q").value.trim();
+  if (!q) return;
+  switchTab("search");
+  $("searchTitle").textContent = `搜索结果：${q}`;
+  $("searchResults").innerHTML = '<div class="empty">检索中…</div>';
+  const data = await (await fetch("/search?" + new URLSearchParams({q, limit: 10}))).json();
+  const degraded = data.degraded && data.degraded.length
+    ? `<span class="badge" style="color:var(--yellow);border-color:var(--yellow)">降级检索：${esc(data.degraded.join(", "))}</span>` : "";
+  const head = `<div class="toolbar">命中 ${data.results.length} 条 · 约 ${fmt(data.token_estimate)} tokens ${degraded}</div>`;
+  const rows = data.results.map(r => `
+    <div class="snippet">
+      <div><b>${esc(r.title)}</b>
+        <span class="badge type">${esc(r.type)}</span>
+        ${r.matched_by.map(m => `<span class="badge matched">${esc(m)}</span>`).join("")}
+        <span class="muted">score ${r.score}</span>
+      </div>
+      ${r.summary ? `<div style="margin:6px 0">${esc(r.summary)}</div>` : ""}
+      <div class="muted">${esc((r.snippet || "").slice(0, 220))}</div>
+      <div style="margin-top:6px"><button onclick="openDetail(${r.asset_id})">查看详情</button></div>
+    </div>`).join("") || '<div class="empty">没有命中</div>';
+  $("searchResults").innerHTML = head + rows;
+}
+
+async function openDetail(id){
+  const drawer = $("drawer");
+  drawer.hidden = false;
+  $("drawerBody").innerHTML = '<div class="empty">加载中…</div>';
+  const [cardRes, getRes, snipRes] = await Promise.all([
+    fetch(`/card/${id}`), fetch(`/get/${id}?max_tokens=900`),
+    fetch(`/snippets?asset_id=${id}&limit=20`),
+  ]);
+  const card = cardRes.ok ? await cardRes.json() : null;
+  const body = getRes.ok ? await getRes.json() : null;
+  const snips = snipRes.ok ? await snipRes.json() : { snippets: [] };
+  const cve = card && card.cve ? `<div style="margin-top:6px">
+      <span class="badge">CVSS ${esc(card.cve.cvss ?? "-")}</span>
+      <span class="badge">${esc(card.cve.cwe ?? "")}</span>
+      ${card.cve.in_kev ? '<span class="badge kev">KEV 在野利用</span>' : ""}</div>` : "";
+  $("drawerBody").innerHTML = `
+    <h2>${esc(card ? card.title : (body ? body.title : "#" + id))}</h2>
+    <div>
+      <span class="badge type">${esc(card ? card.type : "")}</span>
+      <span class="badge">${esc(card ? card.source : "")}</span>
+      <span class="badge">${esc(card ? card.lang : "")}</span>
+      ${(card && card.tags || []).map(t => `<span class="badge">${esc(t)}</span>`).join("")}
+    </div>${cve}
+    ${card && card.summary ? `<h3 style="color:var(--muted);margin:12px 0 4px">摘要</h3><div>${esc(card.summary)}</div>` : ""}
+    ${card && card.key_takeaways && card.key_takeaways.length
+      ? `<h3 style="color:var(--muted);margin:12px 0 4px">要点</h3><ul>${card.key_takeaways.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
+    ${snips.snippets && snips.snippets.length
+      ? `<h3 style="color:var(--muted);margin:12px 0 4px">命令/载荷片段（${snips.count}）</h3>` +
+        snips.snippets.map(s => `<div class="snippet"><div class="muted">${esc(s.kind)} ${s.tool ? "· " + esc(s.tool) : ""}</div><code>${esc(s.content)}</code></div>`).join("")
+      : ""}
+    ${body ? `<h3 style="color:var(--muted);margin:12px 0 4px">正文${body.truncated ? "（截断）" : ""}</h3><pre>${esc(body.content)}</pre>` : ""}
+    <div style="margin-top:10px">
+      ${card && card.source_url ? `<a href="${esc(card.source_url)}" target="_blank" rel="noopener">原始出处</a>` : ""}
+    </div>`;
+}
+
+$("btnSearch").onclick = doSearch;
+$("q").addEventListener("keydown", e => { if (e.key === "Enter") doSearch(); });
+$("btnFilter").onclick = () => loadBrowse(1);
+$("prevPage").onclick = () => { if (browsePage > 1) loadBrowse(browsePage - 1); };
+$("nextPage").onclick = () => loadBrowse(browsePage + 1);
+$("btnCloseDrawer").onclick = () => { $("drawer").hidden = true; };
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+
+loadStats();
+</script>
+</body>
+</html>

@@ -45,10 +45,13 @@ def build_server(
         query: str | None = None,
         tool: str | None = None,
         kind: str | None = None,
+        asset_id: int | None = None,
         limit: int = 10,
     ) -> dict:
-        """检索可直接执行的命令/载荷/代码片段（含工具名与上下文），适合信息收集、漏洞利用与绕过场景取用。"""
-        return kb_tools.kb_snippets(conn, query=query, tool=tool, kind=kind, limit=limit)
+        """检索可直接执行的命令/载荷/代码片段（含工具名与上下文），适合信息收集、漏洞利用与绕过场景取用。可用 asset_id 只看某个资产内的片段。"""
+        return kb_tools.kb_snippets(
+            conn, query=query, tool=tool, kind=kind, asset_id=asset_id, limit=limit
+        )
 
     return server
 

@@ -125,3 +125,12 @@ def test_kb_get_clips_oversized_first_block(kb, tmp_path: Path):
     assert result["content"]
     assert result["truncated"] is True
     assert result["token_estimate"] <= 90
+
+
+def test_kb_snippets_filters_by_asset(kb, tmp_path: Path):
+    a1 = make_asset(kb, tmp_path, "a.md", "资产一", "```bash\nnmap -sV 1.1.1.1\n```")
+    make_asset(kb, tmp_path, "b.md", "资产二", "```bash\nsqlmap -u http://x\n```")
+    only_a1 = kb_snippets(kb.conn, asset_id=a1)
+    assert only_a1["count"] >= 1
+    assert all(item["asset_id"] == a1 for item in only_a1["snippets"])
+    assert kb_snippets(kb.conn, asset_id=99999)["count"] == 0
