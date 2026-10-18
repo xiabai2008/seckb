@@ -2,8 +2,8 @@
 
 > 把安全知识预先采集、结构化，做成 **Agent 能秒查的形态**：本地、带出处、按 token 预算取用。
 
+[![CI](https://github.com/xiabai2008/seckb/actions/workflows/ci.yml/badge.svg)](https://github.com/xiabai2008/seckb/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.12-3776ab?logo=python&logoColor=white)](pyproject.toml)
-[![Tests](https://img.shields.io/badge/tests-183%20passed-35d9a3)](tests/)
 [![MCP](https://img.shields.io/badge/MCP-stdio%20server-8a63d2)](seckb/mcp_server.py)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Data](https://img.shields.io/badge/data-自行采集%20·%20仓库不含语料-f2b33d)](#数据从哪里来本仓库不提供数据)
@@ -375,6 +375,7 @@ seckb daemon               # 或交给守护进程定时增量采集
 
 ```
 seckb/
+├── .github/                # CI（Ubuntu + Windows）+ issue / PR 模板
 ├── config/                 # 全部可调项都在这里（YAML，改配置不改代码）
 │   ├── sources.yaml        # 采集源清单与参数
 │   ├── schedule.yaml       # 守护任务节奏 + LLM 峰谷调度
@@ -394,7 +395,9 @@ seckb/
 │   ├── daemon.py           # APScheduler 守护调度
 │   └── static/dashboard.html
 ├── scripts/                # 运维脚本（启停、体检、回填）
-└── tests/                  # 183 项测试 + 评测集
+├── tests/                  # 183 项测试 + 评测集
+├── docs/screenshots/       # README 用的真实运行截图
+└── CONTRIBUTING · SECURITY · CHANGELOG · CODE_OF_CONDUCT · LICENSE
 ```
 
 ## 开发与测试
@@ -404,7 +407,13 @@ pytest -q                    # 183 passed
 ruff check .                 # lint（line-length 100）
 ```
 
-> `scripts/` 下还有若干历史 lint 提示（UP017 / SIM115 / ISC004），不影响运行。
+CI（`.github/workflows/ci.yml`）在 **Ubuntu 与 Windows** 双平台跑同样这两条。测试是自足的 —— 全部用 mock 与临时库，不需要 Ollama / Meilisearch / LLM Key 就能跑绿。
+
+## 参与贡献
+
+- 想改代码 / 加采集源：先看 [CONTRIBUTING.md](CONTRIBUTING.md)，里面写了新增连接器的步骤、检索改动的注意点，以及**永远不要提交进仓库**的东西（数据、语料、凭据、本机路径）。
+- 发现安全问题：走 [SECURITY.md](SECURITY.md) 里的私密渠道，别开公开 issue。里面也写清了这个工具自身的威胁模型（不可信内容、SSRF 面、本地无鉴权）。
+- 版本变更：[CHANGELOG.md](CHANGELOG.md)。
 
 ## Roadmap
 

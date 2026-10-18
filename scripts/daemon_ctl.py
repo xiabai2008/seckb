@@ -93,8 +93,9 @@ def cmd_start(api_key: str | None) -> int:
     elif not env.get("OPENCODE_API_KEY"):
         print("警告：OPENCODE_API_KEY 为空，富化任务会被静默跳过", file=sys.stderr)
 
-    out = open(LOG_DIR / "daemon.out.log", "ab", buffering=0)
-    err = open(LOG_DIR / "daemon.err.log", "ab", buffering=0)
+    # 句柄要一直留给子进程写日志，Popen 返回后不能关，所以不用 with
+    out = open(LOG_DIR / "daemon.out.log", "ab", buffering=0)  # noqa: SIM115
+    err = open(LOG_DIR / "daemon.err.log", "ab", buffering=0)  # noqa: SIM115
     proc = subprocess.Popen(
         [str(PYTHON), "-m", "seckb", "daemon"],
         cwd=str(REPO),

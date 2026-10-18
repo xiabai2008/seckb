@@ -1,0 +1,17 @@
+# 统一换行符：仓库内存 LF，检出时用平台原生换行，避免 CRLF 噪声
+* text=auto
+
+# 二进制资源必须显式声明，否则可能被当文本处理而损坏
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.epub binary
+*.db binary
+
+# Windows 脚本保持 CRLF
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf

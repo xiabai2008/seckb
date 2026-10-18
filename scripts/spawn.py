@@ -36,10 +36,11 @@ def main() -> int:
         "close_fds": True,
         "creationflags": DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
     }
+    # 句柄要留给被拉起的进程持有，不能在这里用 with 关掉
     if args.out:
-        kwargs["stdout"] = open(args.out, "ab", buffering=0)
+        kwargs["stdout"] = open(args.out, "ab", buffering=0)  # noqa: SIM115
     if args.err:
-        kwargs["stderr"] = open(args.err, "ab", buffering=0)
+        kwargs["stderr"] = open(args.err, "ab", buffering=0)  # noqa: SIM115
 
     try:
         proc = subprocess.Popen(cmd, **kwargs)

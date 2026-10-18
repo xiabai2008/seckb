@@ -1,0 +1,43 @@
+name: 功能建议
+description: 提议新功能、新连接器或检索改进
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你想解决什么问题
+      description: 请描述场景与痛点，而不是直接给方案 —— 这样更容易找到更合适的做法
+      placeholder: |
+        我在用 Agent 查"某类漏洞怎么绕过"时，命中率不高，因为……
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 你设想的做法（可选）
+      description: 如果有具体方案，写在这里
+    validations:
+      required: false
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 类型
+      options:
+        - 新采集源 / 连接器
+        - 检索质量（召回、融合、排序）
+        - Agent 接口（MCP / HTTP / 工具集）
+        - token 预算与上下文开销
+        - 看板 / 运维脚本
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 你考虑过的替代方案（可选）
+    validations:
+      required: false

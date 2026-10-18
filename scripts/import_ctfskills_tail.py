@@ -12,11 +12,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
-import httpx  # noqa: E402
+import httpx
 
-from seckb.config import load_settings  # noqa: E402
-from seckb.db.connection import init_db  # noqa: E402
-from seckb.pipeline.importer import import_file  # noqa: E402
+from seckb.config import load_settings
+from seckb.db.connection import init_db
+from seckb.pipeline.importer import import_file
 
 REPO = "ljagiello/ctf-skills"
 RAW = "https://raw.githubusercontent.com/ljagiello/ctf-skills/HEAD/"

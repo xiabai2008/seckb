@@ -14,7 +14,7 @@ import argparse
 import json
 import sqlite3
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -42,12 +42,12 @@ def _parse_ts(value: str | None) -> datetime | None:
     except ValueError:
         return None
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt
 
 
 def collect(conn: sqlite3.Connection) -> dict:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     scale = {
         "assets": conn.execute("SELECT count(*) FROM assets").fetchone()[0],
@@ -166,8 +166,10 @@ def render(report: dict) -> str:
         "",
         f"规模  资产 {s['assets']:,} · 切片 {s['chunks']:,} · 卡片 {s['cards']:,} · 片段 {s['snippets']:,} · 实体 {s['entities']:,} · CVE {s['cves']:,}",
         f"富化  完成 {report['enrich']['done']:,} · 失败 {report['enrich']['failed']} · 待处理 {report['enrich']['pending']}",
-        f"质量  misc 占比 {q['misc_ratio']:.1%} · 无标签 {q['no_tags']} · 时间格式异常 {q['bad_published_at']} · "
-        f"同标题重复 {q['dup_titles']} 组 · 缺 CVSS {q['missing_cvss']} · 空摘要 {q['empty_summary']}",
+        (
+            f"质量  misc 占比 {q['misc_ratio']:.1%} · 无标签 {q['no_tags']} · 时间格式异常 {q['bad_published_at']} · "
+            f"同标题重复 {q['dup_titles']} 组 · 缺 CVSS {q['missing_cvss']} · 空摘要 {q['empty_summary']}"
+        ),
         "",
         "采集源（停更天数）",
     ]

@@ -1,0 +1,60 @@
+name: Bug 报告
+description: 报告一个可复现的问题
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。提之前请先确认两件事：
+
+        1. **本仓库不含数据** —— 数据是你自己采集的，所以请说明你的来源与规模。
+        2. **检索降级 ≠ 故障** —— `kb_search` 返回的 `degraded` 非空说明 Ollama / Meilisearch 没起，
+           不是 bug；可以用 `kb_services` 工具或看板一键拉起。
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 现象
+      description: 实际发生了什么？你期望的是什么？
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+      description: 越具体越好，最好能给出实际执行的命令
+      placeholder: |
+        1. seckb collect --source nvd
+        2. seckb search "fastjson 反序列化"
+        3. 期望命中 CVE-2022-25845，实际返回空
+    validations:
+      required: true
+
+  - type: textarea
+    id: env
+    attributes:
+      label: 环境
+      description: 操作系统、Python 版本，以及 Ollama / Meilisearch / LLM 富化是否启用
+      placeholder: Windows 11 · Python 3.12.9 · Ollama 已装（bge-m3）· Meilisearch 未装 · 未配 LLM Key
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 报错
+      description: 相关输出。注意先去掉 API Key 等敏感信息
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 自查
+      options:
+        - label: 已在最新的 main 分支上复现
+        - label: 已确认 `degraded` 为空（后端都在线）
+        - label: 已搜索过现有 issue，没有重复
